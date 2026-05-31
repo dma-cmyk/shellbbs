@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, FormEvent, ReactNode, KeyboardEvent, isValidElement } from "react";
+import { defaultBBSContent } from "./defaultBBSContent";
 
 const START_TIME = Date.now();
 
@@ -655,6 +656,7 @@ export const defaultHelpsJa: Record<string, HelpInfo> = {
   memory: { cat: 'UI', related: [], desc: "AIの記憶(メモリ)をカード形式で管理します", usage: "memory [ls|add|rm] [args]", examples: [{cmd:"memory add ユーザーの好み 値", desc: "記憶を追加"}, {cmd: "memory ls", desc: "記憶一覧"}, {cmd: "memory rm <id>", desc: "記憶を削除"}] },
   objective: { cat: 'UI', related: [], desc: "AIエージェントの目的・ゴール(目標設定)を設定します", usage: "objective [set|clear] [args]", examples: [{cmd:"objective", desc: "現在の目的を表示"}, {cmd: "objective set 日本の歴史の解説役", desc: "目標を設定"}, {cmd: "objective clear", desc: "目標をクリア"}] },
         wiki: { cat: 'UI', related: ['help'], desc: "Wiki(ヘルプ)の編集や構築を行います。", usage: "wiki [init|edit|rm] <cmd>", examples: [{cmd:"wiki init", desc: "/sys/wiki に初期ファイルを展開します"}, {cmd: "wiki edit ls", desc: "lsコマンドのヘルプを編集します"}] },
+        startup: { cat: 'UTIL', related: ['web', 'wiki'], desc: "起動時に自動実行されるコマンドを管理・登録します。", usage: "startup [add|rm|edit|clear|run] [args]", examples: [{cmd: "startup", desc: "登録一覧を表示"}, {cmd: "startup add web /bbs.html", desc: "起動時にBBSを表示するよう追加"}, {cmd: "startup rm 1", desc: "1件目の項目を削除"}] },
   split: { cat: 'UI', related: ['tmux', 'web'], desc: "画面を垂直・水平に分割して複数ターミナルを起動します。", usage: "split [v|h|close]", examples: [{cmd: "split v", desc: "画面を垂直に分割"}, {cmd: "split h", desc: "画面を水平に分割"}, {cmd: "split close", desc: "分割を閉じる"}] },
   tmux: { cat: 'UI', related: ['split'], desc: "画面分割コマンド(splitのエイリアス)", usage: "tmux [v|h|close]", examples: [{cmd: "tmux h", desc: "水平分割"}] },
 ls: { 
@@ -768,6 +770,7 @@ export const defaultHelpsEn: Record<string, HelpInfo> = {
   memory: { cat: 'UI', related: [], desc: "Manage AI memory in card format", usage: "memory [ls|add|rm] [args]", examples: [{cmd:"memory add user_pref value", desc: "Add memory"}, {cmd: "memory ls", desc: "List memories"}, {cmd: "memory rm <id>", desc: "Delete memory"}] },
   objective: { cat: 'UI', related: [], desc: "Set core objective/goal for the AI agent", usage: "objective [set|clear] [args]", examples: [{cmd:"objective", desc: "Show current objective"}, {cmd: "objective set Be a history tutor", desc: "Set core objective"}, {cmd: "objective clear", desc: "Clear objective"}] },
         wiki: { cat: 'UI', related: ['help'], desc: "Build or edit the Wiki (help commands).", usage: "wiki [init|edit|rm] <cmd>", examples: [{cmd:"wiki init", desc: "Initializes files into /sys/wiki/"}, {cmd: "wiki edit ls", desc: "Edits the help card for ls"}] },
+        startup: { cat: 'UTIL', related: ['web', 'wiki'], desc: "Manage commands executed automatically on shell startups.", usage: "startup [add|rm|edit|clear|run] [args]", examples: [{cmd: "startup", desc: "List registered commands"}, {cmd: "startup add web /bbs.html", desc: "Add web /bbs.html to startup"}, {cmd: "startup rm 1", desc: "Remove 1st command"}] },
   split: { cat: 'UI', related: ['tmux', 'web'], desc: "Splits the screen vertically or horizontally for multiple terminals.", usage: "split [v|h|close]", examples: [{cmd: "split v", desc: "Split vertically"}, {cmd: "split close", desc: "Close split"}] },
   tmux: { cat: 'UI', related: ['split'], desc: "Terminal multiplexer (alias for split).", usage: "tmux [v|h|close]", examples: [{cmd: "tmux h", desc: "Split horizontally"}] },
 ls: { 
@@ -2543,6 +2546,174 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
       }
       
       return [isJa ? `⚠️ 不明なサブコマンド: ${sub}` : `⚠️ Unknown sub command: ${sub}`];
+    }
+
+    case 'startup': {
+      const isJa = apiFuncs.getLang() === 'ja';
+      const sub = args[0] ? args[0].trim().toLowerCase() : null;
+
+      // Get current startup commands
+      let startupStr = localStorage.getItem("shellboards_startup");
+      let startupCmds: string[] = [];
+      if (startupStr === null) {
+        startupCmds = ["web /bbs.html"];
+        localStorage.setItem("shellboards_startup", JSON.stringify(startupCmds));
+      } else {
+        try {
+          startupCmds = JSON.parse(startupStr);
+          if (!Array.isArray(startupCmds)) {
+            startupCmds = ["web /bbs.html"];
+          }
+        } catch {
+          startupCmds = ["web /bbs.html"];
+        }
+      }
+
+      if (!sub) {
+        // List registered commands
+        if (startupCmds.length === 0) {
+          return [
+            isJa
+              ? "ℹ️ 登録されているスタートアップコマンドはありません。"
+              : "ℹ️ No startup commands registered.",
+            isJa
+              ? "💡 追加するには: startup add <コマンド>"
+              : "💡 To add one: startup add <command>"
+          ];
+        }
+
+        const listLines = startupCmds.map((cmdStr, idx) => (
+          <div key={idx} className="flex items-center gap-2 font-mono text-xs pl-2 border-l-2 border-emerald-500 py-0.5 my-1">
+            <span className="text-emerald-400 font-bold">{idx + 1}:</span>
+            <span className="text-white bg-black/30 px-2 py-0.5 rounded border border-white/5">{cmdStr}</span>
+          </div>
+        ));
+
+        const helpBlock = (
+          <div key="startup-help" className="mt-3 text-xs text-zinc-400 font-sans border-t border-white/10 pt-2 flex flex-col gap-1">
+            <div className="font-bold text-zinc-300">💡 {isJa ? "スタートアップコマンド管理:" : "Startup Command Management:"}</div>
+            <div>• <code className="text-emerald-300 font-mono">startup add &lt;command&gt;</code> - {isJa ? "コマンドを追加登録" : "Register a command to run on start"}</div>
+            <div>• <code className="text-emerald-300 font-mono">startup edit &lt;index&gt; &lt;new_command&gt;</code> - {isJa ? "登録済みのコマンドを編集" : "Edit a registered command"}</div>
+            <div>• <code className="text-emerald-300 font-mono">startup rm &lt;index&gt;</code> - {isJa ? "コマンドを削除" : "Remove a registered command"}</div>
+            <div>• <code className="text-emerald-300 font-mono">startup clear</code> - {isJa ? "すべての登録を削除" : "Clear all registered startup commands"}</div>
+            <div>• <code className="text-emerald-300 font-mono">startup run</code> - {isJa ? "今すぐスタートアップコマンドをすべて実行" : "Run all registered commands right now"}</div>
+          </div>
+        );
+
+        return [
+          <div key="startup-list" className="bg-black/20 border border-white/10 rounded p-4 max-w-xl text-zinc-200">
+            <div className="text-sm font-bold text-emerald-400 border-b border-white/10 pb-2 mb-3 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🚀</span>
+              <span>{isJa ? "スタートアップ登録コマンド一覧" : "Startup Command List"}</span>
+            </div>
+            <div className="flex flex-col gap-1">{listLines}</div>
+            {helpBlock}
+          </div>
+        ];
+      }
+
+      if (sub === 'add') {
+        const cmdToAdd = args.slice(1).join(' ').trim();
+        if (!cmdToAdd) {
+          return [isJa ? "❌ 追加するコマンドを指定してください: startup add <コマンド>" : "❌ Specify command to add: startup add <command>"];
+        }
+        startupCmds.push(cmdToAdd);
+        localStorage.setItem("shellboards_startup", JSON.stringify(startupCmds));
+        return [
+          isJa 
+            ? `✅ スタートアップコマンドを追加しました: "${cmdToAdd}"` 
+            : `✅ Added startup command: "${cmdToAdd}"`
+        ];
+      }
+
+      if (sub === 'rm' || sub === 'remove' || sub === 'delete') {
+        const idxStr = args[1];
+        if (!idxStr) {
+          return [isJa ? "❌ 削除するインデックスを指定してください: startup rm <番号>" : "❌ Specify index to remove: startup rm <index>"];
+        }
+        const idx = parseInt(idxStr) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= startupCmds.length) {
+          return [isJa ? `❌ 無効な番号です (1から${startupCmds.length}の間で指定してください)` : `❌ Invalid index (Specify 1 to ${startupCmds.length})`];
+        }
+        const removed = startupCmds.splice(idx, 1)[0];
+        localStorage.setItem("shellboards_startup", JSON.stringify(startupCmds));
+        return [
+          isJa 
+            ? `✅ スタートアップコマンド "${removed}" を削除しました。` 
+            : `✅ Deleted startup command: "${removed}"`
+        ];
+      }
+
+      if (sub === 'edit') {
+        const idxStr = args[1];
+        const newCmd = args.slice(2).join(' ').trim();
+        if (!idxStr || !newCmd) {
+          return [isJa ? "❌ 番号と新しい内容を指定してください: startup edit <番号> <新しいコマンド>" : "❌ Specify index and new command: startup edit <index> <new_command>"];
+        }
+        const idx = parseInt(idxStr) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= startupCmds.length) {
+          return [isJa ? `❌ 無効な番号です (1から${startupCmds.length}の間で指定してください)` : `❌ Invalid index (Specify 1 to ${startupCmds.length})`];
+        }
+        const oldCmd = startupCmds[idx];
+        startupCmds[idx] = newCmd;
+        localStorage.setItem("shellboards_startup", JSON.stringify(startupCmds));
+        return [
+          isJa 
+            ? `✅ スタートアップコマンド #${idx+1} を変更しました: \n Old: "${oldCmd}" \n New: "${newCmd}"` 
+            : `✅ Changed startup command #${idx+1}: \n Old: "${oldCmd}" \n New: "${newCmd}"`
+        ];
+      }
+
+      if (sub === 'clear') {
+        startupCmds = [];
+        localStorage.setItem("shellboards_startup", JSON.stringify([]));
+        return [
+          isJa 
+            ? "✅ すべてのスタートアップコマンドをクリアしました。" 
+            : "✅ Cleared all startup commands."
+        ];
+      }
+
+      if (sub === 'run') {
+        if (startupCmds.length === 0) {
+          return [isJa ? "ℹ️ 実行するスタートアップコマンドはありません。" : "ℹ️ No startup commands to execute."];
+        }
+        
+        // Print message and run sequentially
+        const results: any[] = [isJa ? "🚀 スタートアップコマンドを順次実行中..." : "🚀 Executing startup commands..."];
+        
+        for (const cmdStr of startupCmds) {
+          if (!cmdStr.trim()) continue;
+          
+          apiFuncs.setOutput((prev: any) => [
+            ...prev,
+            {
+              id: Math.random().toString(),
+              content: (
+                <div className="font-mono text-zinc-400 text-xs mt-2 select-none">
+                  ⚡️ {isJa ? "実行中:" : "Executing:"} <span className="font-bold text-white underline">{cmdStr}</span>
+                </div>
+              )
+            }
+          ]);
+          try {
+            await apiFuncs.executeNested(cmdStr);
+          } catch (e: any) {
+            apiFuncs.setOutput((prev: any) => [
+              ...prev,
+              {
+                id: Math.random().toString(),
+                content: <span className="text-red-400 font-bold font-mono">⚠️ [Error] {e.message}</span>
+              }
+            ]);
+          }
+        }
+        
+        results.push(isJa ? "✅ すべてのスタートアップコマンドの実行が完了しました。" : "✅ Finished running startup commands.");
+        return results;
+      }
+
+      return [isJa ? `⚠️ 不明なオプション: ${sub}` : `⚠️ Unknown option: ${sub}`];
     }
   
     case 'help': {
@@ -4866,7 +5037,7 @@ export default function App() {
 
   // Virtual File System State
   const [vfs, setVfs] = useState<Record<string, { type: 'file' | 'dir', content?: string }>>(() => {
-    const defaultBBSContent = `<!DOCTYPE html>
+    const _old_BBSContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -5524,6 +5695,7 @@ export default function App() {
         const parsed = JSON.parse(saved);
         // Clean up legacy files and force update with the single beautiful default UI
         parsed['/bbs.html'] = { type: 'file', content: defaultBBSContent };
+        parsed['/web.html'] = { type: 'file', content: defaultBBSContent };
         parsed['/demo.sh'] = { type: 'file', content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' };
         parsed['/scripts'] = { type: 'dir' };
         parsed['/scripts/info.sh'] = { type: 'file', content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' };
@@ -5540,7 +5712,7 @@ export default function App() {
     }
     return {
       '/': { type: 'dir' },
-      '/welcome.txt': { type: 'file', content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /bbs.html\n\nYou can edit this app using "nano /bbs.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
+      '/welcome.txt': { type: 'file', content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /web.html   or   web /bbs.html\n\nYou can edit this app using "nano /web.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
       '/demo.sh': { type: 'file', content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' },
       '/scripts': { type: 'dir' },
       '/scripts/info.sh': { type: 'file', content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' },
@@ -5549,7 +5721,8 @@ export default function App() {
       '/scripts/auto_post.sh': { type: 'file', content: 'echo "=== Auto Discussion Board Script ==="\nexport NEW_TID=$(mkthread "AI Space Monitoring")\necho "Successfully established Thread ID: $NEW_TID"\npost $NEW_TID "Submitting initial automated heartbeat log..."\npost $NEW_TID "Everything checks out nominal."\necho "Redirecting to thread room via cd..."\ncd $NEW_TID\necho "Loading posts (ls):"\nls' },
       '/scripts/bbs_sample.js': { type: 'file', content: 'console.log("=== BBS Auto Reporter (JS) ===");\nbbs.threads().then(list => {\n  console.log(`Total threads on server: \${list.length}`);\n  if (list.length > 0) {\n    const target = list[0];\n    console.log(`Viewing posts in thread [\${target.id}] "\${target.title}":`);\n    return bbs.posts(target.id);\n  }\n}).then(posts => {\n  if (posts) {\n    posts.slice(-3).forEach((p, i) => {\n      console.log(`  [Post #\${i+1}] \${p.author}: \${p.content}`);\n    });\n  }\n});' },
       '/scripts/vfs_stats.js': { type: 'file', content: 'console.log("=== VFS Statistics (JS) ===");\nconst files = vfs.ls("/");\nconsole.log("Root files and directories:", files);\nfiles.forEach(f => {\n  if (f !== "scripts" && f !== "/") {\n    const content = vfs.read("/" + f);\n    const size = content ? content.length : 0;\n    console.log(`- /\${f}: \${size} characters`);\n  }\n});' },
-      '/bbs.html': { type: 'file', content: defaultBBSContent }
+      '/bbs.html': { type: 'file', content: defaultBBSContent },
+      '/web.html': { type: 'file', content: defaultBBSContent }
     };
   });
 
@@ -5685,10 +5858,18 @@ export default function App() {
     getSplitMode: () => splitMode,
     fetchThreads: async () => {
         const res = await fetch("/api/threads");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
         return res.json();
     },
     fetchPosts: async (id: string) => {
         const res = await fetch(`/api/threads/${id}/posts`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
         const posts = await res.json();
         if (Array.isArray(posts)) {
           posts.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -5701,6 +5882,10 @@ export default function App() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items })
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
         return res.json();
     },
     createPosts: async (items: any[]) => {
@@ -5709,6 +5894,10 @@ export default function App() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items })
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
         return res.json();
     },
     setUsername,
@@ -5966,6 +6155,76 @@ export default function App() {
       setPendingAgentHistory(history);
     }
   };
+
+  if (typeof window !== "undefined") {
+    (window as any).virtualBBS = apiFuncs;
+  }
+
+  // Run startup commands after mounting
+  useEffect(() => {
+    let active = true;
+    const runStartupCommands = async () => {
+      let startupStr = localStorage.getItem("shellboards_startup");
+      let startupCmds: string[];
+      if (startupStr === null) {
+        startupCmds = ["web /bbs.html"];
+        localStorage.setItem("shellboards_startup", JSON.stringify(startupCmds));
+      } else {
+        try {
+          startupCmds = JSON.parse(startupStr);
+          if (!Array.isArray(startupCmds)) {
+            startupCmds = ["web /bbs.html"];
+          }
+        } catch {
+          startupCmds = ["web /bbs.html"];
+        }
+      }
+
+      for (const cmdStr of startupCmds) {
+        if (!active) break;
+        if (!cmdStr.trim()) continue;
+        
+        // Print the prompt and command line showing it runs as a startup directive
+        setOutput(prev => {
+          let next = [...prev, { 
+            id: Math.random().toString(), 
+            content: (
+              <div className="font-mono">
+                 <span className="text-[#4ade80]">{username}</span>
+                 <span className="text-[#cbd5e1]">@</span>
+                 <span className="text-[#a855f7]">{hostname}</span>
+                 <span className="text-[#cbd5e1]">:</span>
+                 <span className="text-[#60a5fa]">~</span>
+                 <span className="text-[#cbd5e1]">$</span>
+                 <span className="text-white ml-2">
+                   {cmdStr} <span className="text-zinc-500 text-xs italic">({langRef.current === 'ja' ? 'スタートアップ' : 'startup'})</span>
+                 </span>
+              </div>
+            )
+          }];
+          if (next.length > 2000) next = next.slice(next.length - 2000);
+          return next;
+        });
+
+        try {
+          // Execute the command in the shell engine
+          await executeScriptEngine(cmdStr, username, apiFuncs, false);
+        } catch (e: any) {
+          setOutput(prev => [...prev, { id: Math.random().toString(), content: <span className="text-red-500 font-mono">⚠️ {e.message}</span> }]);
+        }
+      }
+    };
+
+    // Delay executing start up scripts slightly to let the UI settle
+    const timer = setTimeout(() => {
+      runStartupCommands();
+    }, 450);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, []);
 
   const onApproveAgentAction = async (cmdToRun: string, currentHistory: any[]) => {
     setIsAgentProcessing(true);
@@ -6439,84 +6698,85 @@ export default function App() {
             <div className={"grid grid-cols-2 gap-x-4 gap-y-1 " + (theme === 'light' ? 'text-zinc-600' : 'text-zinc-400')}>
                <div><span className={"px-1.5 py-0.5 rounded mr-1.5 font-bold " + (theme === 'light' ? 'bg-zinc-300 text-zinc-800' : 'bg-zinc-800 text-white')} >Ctrl+S</span> Save File</div>
                <div><span className={"px-1.5 py-0.5 rounded mr-1.5 font-bold " + (theme === 'light' ? 'bg-zinc-300 text-zinc-800' : 'bg-zinc-800 text-white')} >Ctrl+X</span> Exit Editor</div>
-            </div>
-            <div className="flex gap-2">
-               <button 
-                  id="vfs-editor-btn-save"
-                  type="button"
-                  onClick={saveEditedFile} 
-                  className={"px-4 py-1.5 rounded text-xs font-semibold border cursor-pointer transition-all active:scale-95 " + (theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-cyan-900/80 hover:bg-cyan-800 text-cyan-200 border-cyan-700')}
-               >
-                  保存 (Save)
-               </button>
-               <button 
-                  id="vfs-editor-btn-close"
-                  type="button"
-                  onClick={closeEditor} 
-                  className={"px-4 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all active:scale-95 " + (theme === 'light' ? 'bg-zinc-200 hover:bg-zinc-300 text-zinc-800 border-zinc-300' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-transparent')}
-                >
-                  閉じる (Exit)
-               </button>
-            </div>
-         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={"h-[100dvh] overflow-hidden flex flex-col lg:flex-row focus-within:outline-none w-full " + currentActiveTheme.canvasBg + " " + currentActiveTheme.termText} id="shell-bbs-app-canvas">
-      {/* WRAPPER FOR PANE SPLITS */}
-      <div 
-        ref={containerRef}
-        className={`flex w-full flex-1 ${splitMode === 'v' ? (isPaneSwapped ? 'flex-row-reverse h-full' : 'flex-row h-full') : (isPaneSwapped ? 'flex-col-reverse h-full' : 'flex-col h-full')}`}
-      >
-        {/* LEFT PANEL: TERMINAL */}
-        <div 
-          className={"flex flex-col min-h-0 font-mono text-sm relative " + currentActiveTheme.termBg} 
-          onClick={() => { if (window.getSelection()?.toString() === "") inputRef.current?.focus() }}
-          id="terminal-container-pane"
-          style={splitMode ? (splitMode === 'v' ? { width: `${splitSize}%`, flex: 'none' } : { height: `${splitSize}%`, flex: 'none' }) : { flex: '1 1 0%' }}
-        >
-         {/* Top bar with system metadata and toggles */}
-         {!isIframe && (
-           <div className={"px-4 py-2 flex justify-between items-center select-none shrink-0 border-b " + currentActiveTheme.topbarBg} id="terminal-topbar">
-             <div className="flex items-center gap-2">
-               <span className={"font-bold font-mono " + (theme === 'emerald' || theme === 'matrix' ? 'text-emerald-500' : theme === 'amber' ? 'text-[#ff9800]' : theme === 'dracula' ? 'text-[#ff79c6]' : theme === 'cyberpunk' ? 'text-[#ff0055]' : theme === 'classic' ? 'text-zinc-100' : 'text-rose-600')}>$_</span>
-               <span className={"text-xs font-semibold uppercase tracking-wider font-sans ml-1 " + (theme === 'light' ? 'text-zinc-500' : 'text-zinc-400')}>SHELL BBS TERM V3</span>
              </div>
-             
-             <div className="flex items-center gap-3">
-               {previewFile && (
-                 <button 
+             <div className="flex gap-2">
+                <button 
+                   id="vfs-editor-btn-save"
                    type="button"
-                   onClick={() => setShowPreviewPane(prev => !prev)}
-                   className={"flex items-center gap-1.5 px-3 py-1 border rounded text-xs font-semibold cursor-pointer transition-all hover:scale-105 " + (theme === 'light' ? 'bg-zinc-200 border-zinc-300 text-zinc-800 hover:bg-zinc-300' : 'bg-cyan-950/60 border-cyan-800 text-cyan-400 hover:bg-cyan-900')}
-                   id="toggle-preview-pnl-btn"
+                   onClick={saveEditedFile} 
+                   className={"px-4 py-1.5 rounded text-xs font-semibold border cursor-pointer transition-all active:scale-95 " + (theme === 'light' ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' : 'bg-cyan-900/80 hover:bg-cyan-800 text-cyan-200 border-cyan-700')}
+                >
+                   保存 (Save)
+                </button>
+                <button 
+                   id="vfs-editor-btn-close"
+                   type="button"
+                   onClick={closeEditor} 
+                   className={"px-4 py-1.5 rounded text-xs font-semibold cursor-pointer transition-all active:scale-95 " + (theme === 'light' ? 'bg-zinc-200 hover:bg-zinc-300 text-zinc-800 border-zinc-300' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-transparent')}
                  >
-                   <span>🖥️</span> {showPreviewPane ? (lang === 'ja' ? 'モニター閉じる' : 'Hide Monitor') : (lang === 'ja' ? 'モニター開く' : 'Show Monitor')}
-                 </button>
-               )}
-
-               <span className="text-xs text-zinc-500">2026-05-29 UTC</span>
+                   閉じる (Exit)
+                </button>
              </div>
-           </div>
-         )}
+          </div>
+       </div>
+     );
+   }
 
-         <div className="flex-1 p-2 md:p-4 pb-0 flex flex-col gap-1 overflow-y-auto w-full custom-scrollbar break-words" id="terminal-screen-output">
-           {output.map((line) => (
-             <div key={line.id} className={isValidElement(line.content) ? "shrink-0" : "min-h-[1.5rem] shrink-0 whitespace-pre-wrap font-mono"}>{renderCommandTextWithLinks(line.content)}</div>
-           ))}
-           <div ref={bottomRef} className="pb-4 shrink-0" />
-         </div>
+   return (
+     <div className={"h-[100dvh] overflow-hidden flex flex-col lg:flex-row focus-within:outline-none w-full " + currentActiveTheme.canvasBg + " " + currentActiveTheme.termText} id="shell-bbs-app-canvas">
+       {/* WRAPPER FOR PANE SPLITS */}
+       <div 
+         ref={containerRef}
+         className={`flex w-full flex-1 ${splitMode === 'v' ? (isPaneSwapped ? 'flex-row-reverse h-full' : 'flex-row h-full') : (isPaneSwapped ? 'flex-col-reverse h-full' : 'flex-col h-full')}`}
+       >
+         {/* LEFT PANEL: TERMINAL */}
+         <div 
+           className={"flex flex-col min-h-0 font-mono text-sm relative " + currentActiveTheme.termBg} 
+           onClick={() => { if (window.getSelection()?.toString() === "") inputRef.current?.focus() }}
+           id="terminal-container-pane"
+           style={splitMode ? (splitMode === 'v' ? { width: `${splitSize}%`, flex: 'none' } : { height: `${splitSize}%`, flex: 'none' }) : { flex: '1 1 0%' }}
+         >
+          {/* Top bar with system metadata and toggles */}
+          {!isIframe && (
+            <div className={"px-4 py-2 flex justify-between items-center select-none shrink-0 border-b " + currentActiveTheme.topbarBg} id="terminal-topbar">
+              <div className="flex items-center gap-2">
+                <span className={"font-bold font-mono " + (theme === 'emerald' || theme === 'matrix' ? 'text-emerald-500' : theme === 'amber' ? 'text-[#ff9800]' : theme === 'dracula' ? 'text-[#ff79c6]' : theme === 'cyberpunk' ? 'text-[#ff0055]' : theme === 'classic' ? 'text-zinc-100' : 'text-rose-600')}>$_</span>
+                <span className={"text-xs font-semibold uppercase tracking-wider font-sans ml-1 " + (theme === 'light' ? 'text-zinc-500' : 'text-zinc-400')}>SHELL BBS TERM V3</span>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {previewFile && (
+                  <button 
+                    type="button"
+                    onClick={() => setShowPreviewPane(prev => !prev)}
+                    className={"flex items-center gap-1.5 px-3 py-1 border rounded text-xs font-semibold cursor-pointer transition-all hover:scale-105 " + (theme === 'light' ? 'bg-zinc-200 border-zinc-300 text-zinc-800 hover:bg-zinc-300' : 'bg-cyan-950/60 border-cyan-800 text-cyan-400 hover:bg-cyan-900')}
+                    id="toggle-preview-pnl-btn"
+                  >
+                    <span>🖥️</span> {showPreviewPane ? (lang === 'ja' ? 'モニター閉じる' : 'Hide Monitor') : (lang === 'ja' ? 'モニター開く' : 'Show Monitor')}
+                  </button>
+                )}
 
-          {pendingAgentCmd && (
-            <div className="border border-amber-500/30 bg-amber-500/10 rounded-xl p-3 md:p-4 mx-2 md:mx-4 mb-2 flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between select-none shadow-[0_4px_20px_rgba(245,158,11,0.08)]">
-              <div className="flex gap-3 items-start flex-1 min-w-0 w-full">
-                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 shrink-0 select-none">
-                  <span className="text-lg">⚡️</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs md:text-sm font-bold text-amber-400">
+                <span className="text-xs text-zinc-500">2026-05-29 UTC</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 p-2 md:p-4 pb-0 flex flex-col gap-1 overflow-y-auto w-full custom-scrollbar break-words" id="terminal-screen-output">
+            {output.map((line) => (
+              <div key={line.id} className={isValidElement(line.content) ? "shrink-0" : "min-h-[1.5rem] shrink-0 whitespace-pre-wrap font-mono"}>{renderCommandTextWithLinks(line.content)}</div>
+            ))}
+            <div ref={bottomRef} className="pb-4 shrink-0" />
+          </div>
+
+           {pendingAgentCmd && (
+             <div className="border border-amber-500/30 bg-amber-500/10 rounded-xl p-3 md:p-4 mx-2 md:mx-4 mb-2 flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between select-none shadow-[0_4px_20px_rgba(245,158,11,0.08)]">
+               <div className="flex gap-3 items-start flex-1 min-w-0 w-full">
+                 <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 shrink-0 select-none">
+                   <span className="text-lg">⚡️</span>
+                 </div>
+                 <div className="min-w-0 flex-1">
+                   <div className="text-xs md:text-sm font-bold text-amber-400">
+                     {lang === 'ja' ? "⚠️ AIエージェントがコマンドの実行を求めています（許可制）" : "⚠️ AI Agent requires execution permission"}
                     {lang === 'ja' ? "⚠️ AIエージェントがコマンドの実行を求めています（許可制）" : "⚠️ AI Agent requires execution permission"}
                   </div>
                   <div className="mt-1.5 font-mono text-xs text-zinc-200 bg-zinc-950 px-2.5 py-1.5 rounded border border-zinc-850 break-all select-all shadow-inner">
@@ -6732,57 +6992,10 @@ export default function App() {
           className="fixed inset-0 z-50 bg-[#070708] flex flex-col w-full h-[100dvh] overflow-hidden"
           id="sandbox-device-monitor-panel"
         >
-          {/* Header */}
-          <div className="bg-zinc-950 p-3 shrink-0 flex items-center justify-between border-b border-zinc-900 select-none animate-fade-in" id="monitor-heading">
-            <div className="flex items-center gap-2">
-              <span className="text-cyan-400 text-sm font-bold animate-pulse">●</span>
-              <span className="text-zinc-300 font-bold text-xs uppercase tracking-wider font-sans">
-                {lang === 'ja' ? '仮想モニターサンドボックス (VFS)' : 'VFS Sandbox Virtual Monitor'}
-              </span>
-            </div>
-            
-            <div className="flex gap-2 items-center">
-              <button
-                type="button"
-                onClick={() => setPreviewMode("desktop")}
-                className={`px-3 py-1.5 text-xs rounded transition-all cursor-pointer font-sans font-semibold flex items-center gap-1 ${previewMode === "desktop" ? "bg-cyan-900/40 text-cyan-300 border border-cyan-800" : "bg-transparent text-zinc-500 border border-transparent hover:text-zinc-300"}`}
-              >
-                🖥️ {lang === 'ja' ? '全画面PC' : 'Full PC'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewMode("mobile")}
-                className={`px-3 py-1.5 text-xs rounded transition-all cursor-pointer font-sans font-semibold flex items-center gap-1 ${previewMode === "mobile" ? "bg-cyan-900/40 text-cyan-300 border border-cyan-800" : "bg-transparent text-zinc-500 border border-transparent hover:text-zinc-300"}`}
-              >
-                📱 {lang === 'ja' ? 'スマホ枠' : 'Mobile Frame'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewKey(prev => prev + 1)}
-                className="px-3 py-1.5 text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded transition-all cursor-pointer font-sans font-semibold flex items-center gap-1"
-                title={lang === 'ja' ? 'ページ更新' : 'Reload Sandbox'}
-              >
-                🔄 {lang === 'ja' ? '画面更新' : 'Reload'}
-              </button>
-              <button
-                type="button"
-                onClick={() => apiFuncs.closePreview()}
-                className="ml-2 px-3 py-1.5 bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-800 rounded font-sans text-xs font-bold transition-all hover:scale-102 flex items-center gap-1.5 cursor-pointer"
-                title="閉じる"
-              >
-                <span>✕</span> {lang === 'ja' ? '閉じる' : 'Close'}
-              </button>
-            </div>
-          </div>
-
-          {/* Device Mock Screen */}
-          <div className="flex-grow p-2 sm:p-4 md:p-6 bg-zinc-900/10 flex items-center justify-center overflow-auto min-h-0" id="monitor-canvas-area">
+          {/* Device Mock Screen - Expanded to Full Wide View */}
+          <div className="flex-grow bg-black flex items-center justify-center overflow-hidden min-h-0" id="monitor-canvas-area">
             <div 
-              className={`bg-black border border-zinc-900 shadow-2xl transition-all duration-300 flex flex-col overflow-hidden max-h-full ${
-                previewMode === "mobile" 
-                  ? "w-[340px] h-[580px] max-w-full rounded-2xl border-2 border-zinc-800" 
-                  : "w-full h-full rounded-lg"
-              }`}
+              className="w-full h-full flex flex-col overflow-hidden"
               id="virtual-device-wrapper"
             >
               {/* Sandboxed Output App */}
@@ -6807,13 +7020,34 @@ export default function App() {
             </div>
           </div>
           
-          {/* Status footer for monitor pane */}
-          <div className="bg-zinc-950 px-4 py-2.5 text-[10.5px] text-zinc-500 flex justify-between items-center border-t border-zinc-900 font-sans tracking-wide shrink-0">
-            <span>FILE: <strong className="text-cyan-400 font-mono font-bold">{previewFile}</strong></span>
-            <span className="flex items-center gap-1.5 animate-pulse text-[10px] text-emerald-500 font-semibold font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              HOT-RELOAD ENGAGED
-            </span>
+          {/* Status footer for monitor pane with unified action triggers */}
+          <div className="bg-zinc-950 px-4 py-2.5 text-[11px] text-zinc-400 flex justify-between items-center border-t border-zinc-900 font-sans tracking-wide shrink-0 select-none animate-fade-in">
+            <div className="flex items-center gap-4">
+              <span>FILE: <strong className="text-cyan-400 font-mono font-bold">{previewFile}</strong></span>
+              <span className="hidden sm:flex items-center gap-1.5 text-[10px] text-emerald-500 font-semibold font-mono animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                LIVE RELOAD ACTIVE
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPreviewKey(prev => prev + 1)}
+                className="px-2.5 py-1 text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded transition-all cursor-pointer font-sans font-semibold flex items-center gap-1"
+                title={lang === "ja" ? "ページ更新" : "Reload Sandbox"}
+              >
+                🔄 {lang === "ja" ? "更新" : "Reload"}
+              </button>
+              <button
+                type="button"
+                onClick={() => apiFuncs.closePreview()}
+                className="ml-2 px-3 py-1 bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-800 rounded font-sans text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title={lang === "ja" ? "プレビューを閉じる" : "Close Preview"}
+              >
+                <span>✕</span> {lang === "ja" ? "閉じる" : "Close"}
+              </button>
+            </div>
           </div>
         </div>
       )}
