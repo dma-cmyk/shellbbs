@@ -1587,7 +1587,7 @@ export const modernBBSContent = `<!DOCTYPE html>
               <span class="post-author">\${escapeHTML(authorName)}</span>
               <span class="post-date">
                 \${formattedDate}
-                \${p.userId ? ' <span class="post-id" style="color: var(--secondary); font-size: 10px; margin-left: 6px;">ID:\${escapeHTML(p.userId)}</span>' : ''}
+                \${p.userId ? ' <span class="post-id" style="color: var(--secondary); font-size: 10px; margin-left: 6px;">ID:' + escapeHTML(p.userId) + '</span>' : ''}
               </span>
             </div>
             <div class="post-body">\${parsedContent}</div>
