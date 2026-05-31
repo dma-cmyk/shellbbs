@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, FormEvent, ReactNode, KeyboardEvent, isValidElement } from "react";
 import { defaultBBSContent } from "./defaultBBSContent";
+import { modernBBSContent } from "./modernBBSContent";
 
 const START_TIME = Date.now();
 
@@ -5696,6 +5697,7 @@ export default function App() {
         // Clean up legacy files and force update with the single beautiful default UI
         parsed['/bbs.html'] = { type: 'file', content: defaultBBSContent };
         parsed['/web.html'] = { type: 'file', content: defaultBBSContent };
+        parsed['/modern-bbs.html'] = { type: 'file', content: modernBBSContent };
         parsed['/demo.sh'] = { type: 'file', content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' };
         parsed['/scripts'] = { type: 'dir' };
         parsed['/scripts/info.sh'] = { type: 'file', content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' };
@@ -5712,7 +5714,7 @@ export default function App() {
     }
     return {
       '/': { type: 'dir' },
-      '/welcome.txt': { type: 'file', content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /web.html   or   web /bbs.html\n\nYou can edit this app using "nano /web.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
+      '/welcome.txt': { type: 'file', content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /bbs.html   or   web /modern-bbs.html\n\nYou can edit this app using "nano /modern-bbs.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
       '/demo.sh': { type: 'file', content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' },
       '/scripts': { type: 'dir' },
       '/scripts/info.sh': { type: 'file', content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' },
@@ -5722,7 +5724,8 @@ export default function App() {
       '/scripts/bbs_sample.js': { type: 'file', content: 'console.log("=== BBS Auto Reporter (JS) ===");\nbbs.threads().then(list => {\n  console.log(`Total threads on server: \${list.length}`);\n  if (list.length > 0) {\n    const target = list[0];\n    console.log(`Viewing posts in thread [\${target.id}] "\${target.title}":`);\n    return bbs.posts(target.id);\n  }\n}).then(posts => {\n  if (posts) {\n    posts.slice(-3).forEach((p, i) => {\n      console.log(`  [Post #\${i+1}] \${p.author}: \${p.content}`);\n    });\n  }\n});' },
       '/scripts/vfs_stats.js': { type: 'file', content: 'console.log("=== VFS Statistics (JS) ===");\nconst files = vfs.ls("/");\nconsole.log("Root files and directories:", files);\nfiles.forEach(f => {\n  if (f !== "scripts" && f !== "/") {\n    const content = vfs.read("/" + f);\n    const size = content ? content.length : 0;\n    console.log(`- /\${f}: \${size} characters`);\n  }\n});' },
       '/bbs.html': { type: 'file', content: defaultBBSContent },
-      '/web.html': { type: 'file', content: defaultBBSContent }
+      '/web.html': { type: 'file', content: defaultBBSContent },
+      '/modern-bbs.html': { type: 'file', content: modernBBSContent }
     };
   });
 
@@ -6000,14 +6003,15 @@ export default function App() {
 
       const defaultVFS = {
         '/': { type: 'dir' as const },
-        '/welcome.txt': { type: 'file' as const, content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /bbs.html\n\nYou can edit this app using "nano /bbs.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
+        '/welcome.txt': { type: 'file' as const, content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /bbs.html   or   web /modern-bbs.html\n\nYou can edit this app using "nano /modern-bbs.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
         '/demo.sh': { type: 'file' as const, content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' },
         '/scripts': { type: 'dir' as const },
         '/scripts/info.sh': { type: 'file' as const, content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' },
         '/scripts/piped_fortunes.sh': { type: 'file' as const, content: 'echo "=== Dynamic Fortune Teller ==="\nfortune | cowsay' },
         '/scripts/b64_tool.sh': { type: 'file' as const, content: 'echo "=== Base64 Encoder/Decoder ==="\necho "1. Encoding text to /tmp_b64.txt..."\necho "Active session status: STABLE" | base64 > /tmp_b64.txt\necho "Encoded string stored:"\ncat /tmp_b64.txt\necho "2. Decoding string back..."\ncat /tmp_b64.txt | base64 -d\nrm /tmp_b64.txt' },
         '/scripts/auto_post.sh': { type: 'file' as const, content: 'echo "=== Auto Discussion Board Script ==="\nexport NEW_TID=$(mkthread "AI Space Monitoring")\necho "Successfully established Thread ID: $NEW_TID"\npost $NEW_TID "Submitting initial automated heartbeat log..."\npost $NEW_TID "Everything checks out nominal."\necho "Redirecting to thread room via cd..."\ncd $NEW_TID\necho "Loading posts (ls):"\nls' },
-        '/bbs.html': { type: 'file' as const, content: defaultLayoutRef.current }
+        '/bbs.html': { type: 'file' as const, content: defaultLayoutRef.current },
+        '/modern-bbs.html': { type: 'file' as const, content: modernBBSContent }
       };
       setVfs(defaultVFS);
       
