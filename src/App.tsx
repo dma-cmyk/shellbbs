@@ -36,6 +36,7 @@ const locales = {
       " mkthread <title>    新規スレッド作成 (標準入力からの一括作成対応)",
       " cat <id>            スレッド<id>を読む",
       " post <id> <msg>     スレッド<id>に投稿 (標準入力からの一括投稿対応)",
+      " update             BBSからシステムアップデートを自動適用",
       "  [AI / 環境変数]",
       " ai <text>           AIに質問 (標準入力を文脈として渡せます)",
       " ai config           AIの設定ウィンドウを開く",
@@ -65,6 +66,7 @@ const locales = {
       " history             コマンド履歴",
       " clear               ターミナル消去",
       " reset               ローカルデータを初期化",
+      " update              システムアップデート",
       " su <user>           ユーザー変更",
       " whoami              ユーザー名確認",
       " lang <ja|en>        言語切り替え",
@@ -101,6 +103,7 @@ const locales = {
       " mkthread <title>    Create thread (supports stdin bulk)",
       " cat <id>            Read posts in thread <id>",
       " post <id> <msg>     Post to thread (supports stdin bulk)",
+      " update              Auto-apply system updates from BBS",
       "  [AI / Env]",
       " ai <text>           Ask AI (supports stdin as context)",
       " ai config           Open AI settings wizard",
@@ -130,6 +133,7 @@ const locales = {
       " history             Show command history",
       " clear               Clear terminal",
       " reset               Initialize local data",
+      " update              System update",
       " su <user>           Change user",
       " whoami              Show user",
       " lang <ja|en>        Change language",
@@ -378,7 +382,7 @@ const ALL_COMMANDS = [
   'export', 'env', 'printenv', 'ai', 'chat',
   'history', 'lang', 'theme', 'themes', 'maketheme', 'su', 'whoami', 'clear', 'help',
   'pwd', 'mkdir', 'touch', 'rm', 'mv', 'cp', 'sh', 'nano', 'edit', 'write', 'js', 'node', 'expr', 'bc', 'calc',
-  'memory', 'wiki', 'task', 'schedule', 'web', 'preview'
+  'memory', 'wiki', 'task', 'schedule', 'web', 'preview', 'update'
 ];
 
 export interface SuggestionCandidate {
@@ -726,6 +730,7 @@ grep: { cat: 'UTIL', related: ['awk'], desc: "指定したパターン(文字列
 wc: { cat: 'UTIL', related: ['cat'], desc: "行数、単語数、バイト数をカウントします。", usage: "wc [-l] <file>", options:[{opt:"-l", desc:"行数のみカウント"}], examples: [{ cmd: "wc log.txt", desc: "統計情報を見ます" }] },
 sleep: { cat: 'UTIL', related: ['watch'], desc: "指定した秒数待機します。スクリプト等で一時停止したい時に使用します。", usage: "sleep <sec>", examples: [{cmd: "sleep 3; echo 'done'", desc: "3秒待ってからテキストを出力します"}] },
 reset: { cat: 'UTIL', related: ['clear'], desc: "ターミナルをリセットします。", usage: "reset", examples: [{cmd: "reset", desc: "画面表示をすべてリセットし、初期状態にします"}] },
+update: { cat: 'UTIL', related: ['reset', 'threads'], desc: "BBSのお知らせスレッドからシステムファイルを自動で最新版にアップデートします。", usage: "update", examples: [{cmd: "update", desc: "BBSの配信情報からシステムをアップデートします"}] },
 sort: { cat: 'UTIL', related: ['uniq'], desc: "行を並び替えます。", usage: "sort [-r|-n] <file>", options:[{opt:"-r",desc:"逆順"},{opt:"-n",desc:"数値として比較"}], examples: [{ cmd: "sort log.txt", desc: "アルファベット順にソート" }] },
 uniq: { cat: 'UTIL', related: ['sort'], desc: "連続する重複行を削除します。", usage: "uniq [-c] <file>", options:[{opt:"-c",desc:"出現回数をカウント"}], examples: [{ cmd: "sort file | uniq", desc: "並び替えた上で重複排除。" }] },
 rev: { cat: 'UTIL', related: ['cat'], desc: "行の文字を反転させます。", usage: "rev <file>", examples: [{cmd: "echo 'hello' | rev", desc: "olleh と出力されます"}] },
@@ -841,6 +846,7 @@ grep: { cat: 'UTIL', related: ['awk'], desc: "Prints lines matching a pattern.",
 wc: { cat: 'UTIL', related: ['cat'], desc: "Prints newline, word, and byte counts.", usage: "wc [-l] <file>", options:[{opt:"-l", desc:"Count lines only."}], examples: [{ cmd: "wc log.txt", desc: "Prints file stats." }] },
 sleep: { cat: 'UTIL', related: ['watch'], desc: "Delays execution for a specified time.", usage: "sleep <sec>", examples: [{ cmd: "sleep 3; echo 'done'", desc: "Waits 3 seconds then prints text." }] },
 reset: { cat: 'UTIL', related: ['clear'], desc: "Resets the terminal display.", usage: "reset", examples: [{ cmd: "reset", desc: "Clears and resets the screen state." }] },
+update: { cat: 'UTIL', related: ['reset', 'threads'], desc: "Auto-updates system files from BBS update announcements.", usage: "update", examples: [{cmd: "update", desc: "Checks and downloads file updates from the BBS."}] },
 sort: { cat: 'UTIL', related: ['uniq'], desc: "Sorts lines of text files.", usage: "sort [-r|-n] <file>", options:[{opt:"-r",desc:"Reverse order."},{opt:"-n",desc:"Numeric sort."}], examples: [{ cmd: "sort log.txt", desc: "Sorts alphabetically." }] },
 uniq: { cat: 'UTIL', related: ['sort'], desc: "Removes consecutive duplicate lines.", usage: "uniq [-c] <file>", options:[{opt:"-c",desc:"Count occurrences."}], examples: [{ cmd: "sort file | uniq", desc: "Sorts then removes duplicates." }] },
 rev: { cat: 'UTIL', related: ['cat'], desc: "Reverses characters in each line.", usage: "rev <file>", examples: [{ cmd: "echo 'hello' | rev", desc: "Outputs 'olleh'." }] },
@@ -1005,6 +1011,66 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
     case 'reset': {
       apiFuncs.resetLocalData();
       return [];
+    }
+    case 'update': {
+      const isJa = apiFuncs.getLang() === 'ja';
+      try {
+        const threads = await apiFuncs.fetchThreads();
+        const updateThreads = threads.filter((t: any) => 
+          t.title.includes('【システム配信】') || 
+          t.title.toLowerCase().includes('system updates')
+        );
+
+        if (updateThreads.length === 0) {
+          return [isJa ? "システム配信スレッドが見つかりませんでした。" : "No system update threads found on BBS."];
+        }
+
+        let updatedFiles: string[] = [];
+        const vfsObj = apiFuncs.getVFS ? apiFuncs.getVFS() : {};
+        const newVfs = { ...vfsObj };
+
+        for (const thread of updateThreads) {
+          const posts = await apiFuncs.fetchPosts(thread.id);
+          for (const post of posts) {
+            const regex = /<update\s+path="([^"]+)">([\s\S]*?)<\/update>/g;
+            let match;
+            while ((match = regex.exec(post.content)) !== null) {
+              const filePath = match[1];
+              const fileContent = match[2];
+              
+              const normalizedPath = filePath.startsWith('/') ? filePath : '/' + filePath;
+              const parent = normalizedPath.split('/').slice(0, -1).join('/') || '/';
+              
+              if (parent !== '/') {
+                const parts = parent.split('/').filter(p => p);
+                let currentPath = "";
+                for (const part of parts) {
+                  currentPath += "/" + part;
+                  if (!newVfs[currentPath]) {
+                    newVfs[currentPath] = { type: 'dir' };
+                  }
+                }
+              }
+
+              newVfs[normalizedPath] = { type: 'file', content: fileContent };
+              updatedFiles.push(normalizedPath);
+            }
+          }
+        }
+
+        if (updatedFiles.length > 0) {
+          apiFuncs.setVFS(newVfs);
+          return [
+            isJa 
+              ? `✨ システムアップデートが完了しました！以下のファイルが更新されました：\n` + updatedFiles.map(f => `  - ${f}`).join('\n')
+              : `✨ System update completed! The following files have been updated:\n` + updatedFiles.map(f => `  - ${f}`).join('\n')
+          ];
+        } else {
+          return [isJa ? "適用可能な新しいアップデートはありませんでした。" : "No new updates found to apply."];
+        }
+      } catch (e: any) {
+        return [`update error: ${e.message || String(e)}`];
+      }
     }
     case 'sort': {
       let sortR = false, sortN = false;
