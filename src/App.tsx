@@ -7014,7 +7014,7 @@ export default function App() {
                     }
                     return `${baseTag}\n${previewContent}`;
                   })()}
-                  sandbox="allow-scripts allow-modals allow-same-origin allow-forms"
+                  sandbox="allow-scripts allow-modals allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                   referrerPolicy="no-referrer"
                   className="w-full h-full border-none bg-black overflow-auto"
                   id="preview-sandbox-iframe"

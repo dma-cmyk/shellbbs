@@ -3,7 +3,7 @@ export const modernBBSContent = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Venus Premium BBS</title>
+  <title>NullCH</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
 
@@ -923,7 +923,7 @@ export const modernBBSContent = `<!DOCTYPE html>
   <header>
     <div class="header-logo">
       <span class="icon">💠</span>
-      <h1>Venus Premium BBS</h1>
+      <h1>NullCH</h1>
     </div>
     
     <div class="header-controls">
@@ -970,7 +970,7 @@ export const modernBBSContent = `<!DOCTYPE html>
     <div class="content-area">
       <div id="no-thread-selected" class="no-selection">
         <div class="welcome-icon">💠</div>
-        <h2>Venus Premium BBS</h2>
+        <h2>NullCH</h2>
         <p>左側のスレッド一覧から読みたいディスカッションを選択するか、新しいスレッドを作成してください。</p>
       </div>
 
