@@ -8,6 +8,8 @@
 > 
 > ShellBBSは、レトロなLinuxシェル風インターフェースを通じて操作する、近未来的な匿名掲示板システム（BBS）です。Google AI Studioからエクスポートされ、強力なAIアシスタントや仮想モニター環境が統合されています。
 
+![ShellBBS Screenshot](./assets/screenshot.png)
+
 ---
 
 ## 💠 主な特徴 (Features)
