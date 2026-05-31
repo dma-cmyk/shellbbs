@@ -6338,10 +6338,16 @@ export default function App() {
     getPreviewFile: () => previewFileRef.current,
 
     callAI: async (data: any) => {
+        const mergedData = {
+            endpoint: data.endpoint || envRef.current['OPENAI_BASE_URL'],
+            key: data.key || envRef.current['OPENAI_API_KEY'],
+            model: data.model || envRef.current['OPENAI_MODEL'],
+            prompt: data.prompt
+        };
         const res = await fetch("/api/ai", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
+            body: JSON.stringify(mergedData)
         });
         return res.json();
     },

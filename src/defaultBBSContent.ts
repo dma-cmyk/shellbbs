@@ -775,12 +775,34 @@ export const defaultBBSContent = `<!DOCTYPE html>
         if (parentBBS && parentBBS.callAI) {
           return await parentBBS.callAI({ prompt });
         }
+        
+        let key = null;
+        let endpoint = null;
+        let model = null;
+        try {
+          const savedEnv = localStorage.getItem("shellboards_env");
+          if (savedEnv) {
+            const parsed = JSON.parse(savedEnv);
+            key = parsed.OPENAI_API_KEY;
+            endpoint = parsed.OPENAI_BASE_URL;
+            model = parsed.OPENAI_MODEL;
+          }
+        } catch (e) {}
+
         const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt })
+          body: JSON.stringify({ prompt, key, endpoint, model })
         });
-        if (!response.ok) throw new Error('REST API status ' + response.status);
+        if (!response.ok) {
+          const errText = await response.text();
+          let errMsg = errText;
+          try {
+            const errObj = JSON.parse(errText);
+            errMsg = errObj.error || errText;
+          } catch(e) {}
+          throw new Error(errMsg);
+        }
         return await response.json();
       } catch (err) {
         console.error("apiCallAI error:", err);
@@ -1318,19 +1340,58 @@ export const defaultBBSContent = `<!DOCTYPE html>
     }
 
     async function askAiToDraft() {
+      const textarea = document.getElementById('composer-content');
       const btn = document.getElementById('ai-btn');
-      if (!btn) return;
+      if (!textarea || !btn || !activeThreadId) return;
+      
       const originalText = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = '✨ AI考察中...';
       
       try {
-        const promptText = \`We are in a thread. Build a helpful, professional, and insightfully creative paragraph suggestion as a reply to this context. Output only the content of the suggest reply text directly with no markdown annotations or wrapping quotes.\`;
+        const posts = await apiFetchPosts(activeThreadId);
+        let historyPrompt = "";
+        if (Array.isArray(posts)) {
+          historyPrompt = posts.slice(-5).map((p, i) => "Res " + (i+1) + " by " + p.author + ": " + p.content).join("\\n");
+        }
+
+        let isJa = true;
+        try {
+          const parentBBS = await getBBSApi();
+          if (parentBBS && parentBBS.getLang) {
+            isJa = parentBBS.getLang() === 'ja';
+          } else {
+            isJa = localStorage.getItem("shellboards_lang") !== 'en';
+          }
+        } catch (e) {}
+
+        const userText = textarea.value.trim();
+        let userInstructionPrompt = "";
+        if (userText) {
+          userInstructionPrompt = "The user has provided the following guidance or rough draft for their reply:\\n" +
+                                  "\\\"" + userText + "\\\"\\n" +
+                                  "Please expand, polish, or generate a response that strictly aligns with this guidance.\\n";
+        }
+
+        const threadTitle = knownThreads[activeThreadId] || "";
+        const langStr = isJa ? "in Japanese" : "in English";
+        const promptText = "We are in a forum thread. " + 
+                           (threadTitle ? "The thread title is: \\\"" + threadTitle + "\\\".\\n" : "") +
+                           "Here is the recent chat history of the thread:\\n" + 
+                           historyPrompt + "\\n" +
+                           userInstructionPrompt +
+                           "\\nPlease write a helpful, witty, or insightful reply (" + langStr + ") fitting the conversation. Output only the content of the reply directly, with no markdown tags or wrapping quotes.";
+
         const data = await apiCallAI(promptText);
-        const textarea = document.getElementById('composer-content');
-        if (textarea) textarea.value = data.content || '';
+        if (data && data.content) {
+          textarea.value = data.content;
+          textarea.focus();
+        } else {
+          showToast("⚠️ AIアシスタント", "下書きの生成に失敗しました。");
+        }
       } catch (err) {
         console.error("AI error:", err);
+        showToast("⚠️ AIエラー", err.message);
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;

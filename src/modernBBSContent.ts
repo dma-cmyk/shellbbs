@@ -1144,12 +1144,34 @@ export const modernBBSContent = `<!DOCTYPE html>
         if (parentBBS && parentBBS.callAI) {
           return await parentBBS.callAI({ prompt });
         }
+        
+        let key = null;
+        let endpoint = null;
+        let model = null;
+        try {
+          const savedEnv = localStorage.getItem("shellboards_env");
+          if (savedEnv) {
+            const parsed = JSON.parse(savedEnv);
+            key = parsed.OPENAI_API_KEY;
+            endpoint = parsed.OPENAI_BASE_URL;
+            model = parsed.OPENAI_MODEL;
+          }
+        } catch (e) {}
+
         const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt })
+          body: JSON.stringify({ prompt, key, endpoint, model })
         });
-        if (!response.ok) throw new Error('REST API status ' + response.status);
+        if (!response.ok) {
+          const errText = await response.text();
+          let errMsg = errText;
+          try {
+            const errObj = JSON.parse(errText);
+            errMsg = errObj.error || errText;
+          } catch(e) {}
+          throw new Error(errMsg);
+        }
         return await response.json();
       } catch (err) {
         console.error("apiCallAI error:", err);
@@ -1659,9 +1681,32 @@ export const modernBBSContent = `<!DOCTYPE html>
           historyPrompt = posts.slice(-5).map((p, i) => "Res " + (i+1) + " by " + p.author + ": " + p.content).join("\\n");
         }
 
-        const promptText = "We are in a forum thread. Here is the recent chat history of the thread:\\n" + 
-                           historyPrompt + 
-                           "\\n\\nPlease write a helpful, witty, or insightful reply (in Japanese) fitting the conversation. Output only the content of the reply directly, with no markdown tags or wrapping quotes.";
+        let isJa = true;
+        try {
+          const parentBBS = await getBBSApi();
+          if (parentBBS && parentBBS.getLang) {
+            isJa = parentBBS.getLang() === 'ja';
+          } else {
+            isJa = localStorage.getItem("shellboards_lang") !== 'en';
+          }
+        } catch (e) {}
+
+        const userText = input.value.trim();
+        let userInstructionPrompt = "";
+        if (userText) {
+          userInstructionPrompt = "The user has provided the following guidance or rough draft for their reply:\\n" +
+                                  "\\\"" + userText + "\\\"\\n" +
+                                  "Please expand, polish, or generate a response that strictly aligns with this guidance.\\n";
+        }
+
+        const threadTitle = knownThreads[activeThreadId] || "";
+        const langStr = isJa ? "in Japanese" : "in English";
+        const promptText = "We are in a forum thread. " + 
+                           (threadTitle ? "The thread title is: \\\"" + threadTitle + "\\\".\\n" : "") +
+                           "Here is the recent chat history of the thread:\\n" + 
+                           historyPrompt + "\\n" +
+                           userInstructionPrompt +
+                           "\\nPlease write a helpful, witty, or insightful reply (" + langStr + ") fitting the conversation. Output only the content of the reply directly, with no markdown tags or wrapping quotes.";
         
         const res = await apiCallAI(promptText);
         if (res && res.content) {

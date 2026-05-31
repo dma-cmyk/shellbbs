@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { GoogleGenAI } from "@google/genai";
 import { readFileSync } from "fs";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, getDocs, setDoc } from "firebase/firestore";
@@ -295,33 +294,8 @@ app.post("/api/posts/bulk", async (req, res) => {
 app.post("/api/ai", async (req, res) => {
   const { endpoint, key, model, prompt } = req.body;
 
-  // Resolve API key
-  const resolvedKey = key || process.env.OPENAI_API_KEY;
-
-  // Fallback to Gemini if no OpenAI API Key is provided
-  if (!resolvedKey) {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return res.status(400).json({ error: "No API Key found. Please set OPENAI_API_KEY or configure GEMINI_API_KEY in server secrets." });
-    }
-
-    try {
-      const ai = new GoogleGenAI({
-        apiKey: geminiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build'
-          }
-        }
-      });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt
-      });
-      return res.json({ content: response.text || "" });
-    } catch (error: any) {
-      return res.status(500).json({ error: `Gemini API Error: ${error.message}` });
-    }
+  if (!key) {
+    return res.status(400).json({ error: "APIキーが設定されていません。「ai config」コマンドからAPIキーを設定してください。" });
   }
 
   let url = endpoint || "https://api.openai.com/v1/chat/completions";
@@ -335,7 +309,7 @@ app.post("/api/ai", async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${resolvedKey}`
+        "Authorization": `Bearer ${key}`
       },
       body: JSON.stringify({
         model: actualModel,
@@ -363,7 +337,7 @@ app.post("/api/ai", async (req, res) => {
 
 // Only start the dev server / static server if we are running locally (not on Vercel)
 if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3100;
 
   if (process.env.NODE_ENV !== "production") {
     import("vite").then(({ createServer }) => {
