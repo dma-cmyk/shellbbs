@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /threads/{threadId} {
+      allow read, list, get: if true;
+      allow create: if request.resource.data.keys().hasAll(['title', 'author', 'createdAt']) &&
+                    request.resource.data.keys().size() == 3 &&
+                    request.resource.data.title is string &&
+                    request.resource.data.title.size() <= 200 &&
+                    request.resource.data.author is string &&
+                    request.resource.data.author.size() <= 128 &&
+                    request.resource.data.createdAt is string;
+      allow update, delete: if false;
+    }
+
+    match /posts/{postId} {
+      allow read, list, get: if true;
+      allow create: if request.resource.data.keys().hasAll(['threadId', 'author', 'content', 'timestamp']) &&
+                    (request.resource.data.keys().size() == 4 || 
+                     (request.resource.data.keys().size() == 5 && 
+                      'userId' in request.resource.data &&
+                      request.resource.data.userId is string &&
+                      request.resource.data.userId.size() <= 128)) &&
+                    request.resource.data.threadId is string &&
+                    request.resource.data.threadId.size() <= 128 &&
+                    request.resource.data.author is string &&
+                    request.resource.data.author.size() <= 128 &&
+                    request.resource.data.content is string &&
+                    request.resource.data.content.size() <= 1000 &&
+                    request.resource.data.timestamp is string;
+      allow update, delete: if false;
+    }
+  }
+}

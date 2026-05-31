@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "thread": {
+      "title": "Thread",
+      "description": "A BBS thread",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Title of the thread"
+        },
+        "author": {
+          "type": "string",
+          "description": "Username of the creator"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["title", "author", "createdAt"]
+    },
+    "post": {
+      "title": "Post",
+      "description": "A post within a thread",
+      "type": "object",
+      "properties": {
+        "threadId": {
+          "type": "string",
+          "description": "ID of the associated thread"
+        },
+        "author": {
+          "type": "string",
+          "description": "Username of the poster"
+        },
+        "content": {
+          "type": "string",
+          "description": "Body markdown/text content of the post"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Calculated ID of the user based on client IP"
+        }
+      },
+      "required": ["threadId", "author", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "threads/{threadId}": {
+      "schema": "thread",
+      "description": "Collection of BBS threads"
+    },
+    "posts/{postId}": {
+      "schema": "post",
+      "description": "Collection of posts for threads"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+
+        ls: { 
+          cat: 'FILE', related: ['cd', 'pwd'], 
+          desc: "Lists files/folders or thread posts.", 
+          usage: "ls [dir_or_thread_id]",
+          options: [
+            { opt: '-r', desc: 'Reverse the order when viewing thread posts.' }
+          ],
+          examples: [
+            { cmd: "ls", desc: "List contents of the current directory." },
+            { cmd: "ls /scripts", desc: "List contents of a specific directory." },
+            { cmd: "ls 1700000000000", desc: "List posts of a specific thread ID." },
+          ]
+        },
+        cd: { 
+          cat: 'FILE', related: ['ls', 'pwd'], 
+          desc: "Changes directory or enters a thread context.", 
+          usage: "cd <path_or_thread_id>",
+          examples: [
+            { cmd: "cd /", desc: "Change to the root directory." },
+            { cmd: "cd ..", desc: "Move up one directory." },
+            { cmd: "cd 1700000000000", desc: "Enter a specific thread context for subsequent commands (like post)." }
+          ]
+        },
+        pwd: { 
+          cat: 'FILE', related: ['ls', 'cd'], 
+          desc: "Prints current working directory path.", 
+          usage: "pwd",
+          examples: [
+            { cmd: "pwd", desc: "Prints the path (e.g. /scripts)." }
+          ]
+        },
+        mkdir: { cat: 'FILE', related: ['touch', 'rm'], desc: "Creates a directory.", usage: "mkdir <folder>" },
+        touch: { cat: 'FILE', related: ['mkdir', 'nano'], desc: "Creates empty file.", usage: "touch <file>" },
+        rm: { cat: 'FILE', related: ['mv', 'cp'], desc: "Removes file/folder.", usage: "rm [-r] <path>" },
+        mv: { cat: 'FILE', related: ['cp', 'rm'], desc: "Moves file/folder.", usage: "mv <src> <dst>" },
+        cp: { cat: 'FILE', related: ['mv', 'rm'], desc: "Copies file.", usage: "cp <src> <dst>" },
+        nano: { cat: 'FILE', related: ['edit', 'write', 'cat'], desc: "テキストエディタを起動してファイルを編集します。", usage: "nano <file>", examples: [{ cmd: "nano src.js", desc: "ブラウザ上でテキストエディタを使って編集します。" }] },
+        edit: { cat: 'FILE', related: ['nano', 'write'], desc: "テキストエディタを起動します。(nanoのエイリアス)", usage: "edit <file>", examples: [{ cmd: "edit src.js", desc: "エディタを開きます。" }] },
+        write: { cat: 'FILE', related: ['nano', 'cat'], desc: "ファイルにテキストを直接書き込みます(上書き)。", usage: "write <file> <text>", examples: [{ cmd: "write test.txt Hello", desc: "test.txtにHelloを書き込みます。" }] },
+        
+        threads: { cat: 'BBS', related: ['mkthread', 'read'], desc: "Lists all threads.", usage: "threads [-r]" },
+        mkthread: { cat: 'BBS', related: ['threads', 'post'], desc: "新しくスレッドを作成します。", usage: "mkthread <title>", examples: [{ cmd: "mkthread \"My New Thread\"", desc: "指定のタイトルでスレッドを作成します。" }] },
+        post: { cat: 'BBS', related: ['threads', 'read', 'cat'], desc: "指定したスレッドに新規書き込み(返信)をします。", usage: "post [id] <msg>", examples: [{ cmd: "post 1700 Hello", desc: "指定IDにHelloと投稿します。" }, {cmd: "post hello", desc: "カレントスレッド入室中ならIDなしで投稿可"}] },
+        cat: { cat: 'BBS', related: ['read', 'nano'], desc: "Prints file content or thread posts.", usage: "cat <path_or_id>" },
+        read: { cat: 'BBS', related: ['cat', 'threads'], desc: "スレッドの全返信を閲覧します。", usage: "read <id>", examples: [{ cmd: "read 1700", desc: "スレッドのコメントを読みます。" }] },
+        
+        sh: { cat: 'EXEC', related: ['js', 'watch'], desc: "シェルスクリプトを実行します。", usage: "sh <file.sh>", examples: [{ cmd: "sh run.sh", desc: "スクリプトを実行します。" }] },
+        js: { cat: 'EXEC', related: ['node', 'sh'], desc: "JavaScriptのコードを評価します。", usage: "js <code>", examples: [{ cmd: "js \"console.log(1+1)\"", desc: "JSを実行して出力を得ます。" }] },
+        node: { cat: 'EXEC', related: ['js'], desc: "JavaScriptコード評価(jsのエイリアス)。", usage: "node <code>", examples: [{ cmd: "node app.js", desc: "JSファイルを実行します。" }] },
+        expr: { cat: 'EXEC', related: ['bc', 'calc'], desc: "簡単な計算式を評価します。", usage: "expr <math>", examples: [{ cmd: "expr 1 + 2", desc: "足し算をします。" }] },
+        bc: { cat: 'EXEC', related: ['expr', 'calc'], desc: "計算式を評価します。", usage: "bc <math>", examples: [{ cmd: "echo '1+1' | bc", desc: "標準入力から数式を受け取ります。" }] },
+        calc: { cat: 'EXEC', related: ['expr', 'bc'], desc: "高度な数式計算や変数代入が行えます。", usage: "calc <math>", examples: [{ cmd: "calc a=5; a*2", desc: "変数を使った計算も可能です。" }] },
+        watch: { cat: 'EXEC', related: ['sh'], desc: "コマンドを指定秒数ごとに定期実行します。", usage: "watch <sec> <cmd>", examples: [{ cmd: "watch 2 date", desc: "2秒間に1回現在時刻を表示します。" }, { cmd: "watch stops", desc: "定期実行を停止します。" }] },
+        ai: { cat: 'EXEC', related: ['chat'], desc: "AI automation, interactive chat, or config.", usage: "ai [chat|config|<prompt>]" },
+        chat: { cat: 'EXEC', related: ['ai'], desc: "AIとの対話モードに入ります。", usage: "chat", examples: [{ cmd: "chat", desc: "対話モードを起動" }] },
+
+        echo: { cat: 'UTIL', related: ['cat'], desc: "Prints text.", usage: "echo <text>" },
+        yes: { cat: 'UTIL', related: ['echo'], desc: "Repeatedly outputs a line with all specified strings.", usage: "yes [text]" },
+        seq: { cat: 'UTIL', related: ['echo'], desc: "連続した数字を出力します。", usage: "seq <first> <last>", examples: [{ cmd: "seq 1 5", desc: "1から5までの数値を出力します" }] },
+        head: { cat: 'UTIL', related: ['tail', 'cat'], desc: "ファイルの先頭部分を出力します。", usage: "head [-n limit] <file>", options:[{opt:"-n", desc:"表示する行数を指定します"}], examples: [{ cmd: "head -n 5 log.txt", desc: "先頭5行などを出力します" }] },
+        tail: { cat: 'UTIL', related: ['head', 'cat'], desc: "ファイルの末尾部分を出力します。", usage: "tail [-n limit] <file>", options:[{opt:"-n", desc:"末尾から抽出する行数"}], examples: [{ cmd: "tail -n 10 log.txt", desc: "末尾10行を抽出" }] },
+        grep: { cat: 'UTIL', related: ['awk'], desc: "Prints lines matching a pattern.", usage: "grep <pattern> <file>" },
+        wc: { cat: 'UTIL', related: ['cat'], desc: "行数、単語数、バイト数をカウントします。", usage: "wc [-l] <file>", options:[{opt:"-l", desc:"行数のみカウント"}], examples: [{ cmd: "wc log.txt", desc: "統計情報を見ます" }] },
+        sleep: { cat: 'UTIL', related: ['watch'], desc: "Delays for a specified amount of time.", usage: "sleep <sec>" },
+        reset: { cat: 'UTIL', related: ['clear'], desc: "Resets the terminal.", usage: "reset" },
+        sort: { cat: 'UTIL', related: ['uniq'], desc: "行を並び替えます。", usage: "sort [-r|-n] <file>", options:[{opt:"-r",desc:"逆順"},{opt:"-n",desc:"数値として比較"}], examples: [{ cmd: "sort log.txt", desc: "アルファベット順にソート" }] },
+        uniq: { cat: 'UTIL', related: ['sort'], desc: "連続する重複行を削除します。", usage: "uniq [-c] <file>", options:[{opt:"-c",desc:"出現回数をカウント"}], examples: [{ cmd: "sort file | uniq", desc: "並び替えた上で重複排除。" }] },
+        rev: { cat: 'UTIL', related: ['cat'], desc: "Reverses lines characterwise.", usage: "rev <file>" },
+        shuf: { cat: 'UTIL', related: ['sort'], desc: "Generates random permutations.", usage: "shuf <file>" },
+        base64: { cat: 'UTIL', related: ['cat'], desc: "Base64 encodes/decodes data.", usage: "base64 [-d] <file>" },
+        cowsay: { cat: 'UTIL', related: ['fortune'], desc: "喋る牛のアスキーアートを生成します。", usage: "cowsay <text>", examples: [{ cmd: "cowsay moo", desc: "牛が喋ります。" }] },
+        fortune: { cat: 'UTIL', related: ['cowsay'], desc: "Prints a random, hopefully interesting, adage.", usage: "fortune" },
+        date: { cat: 'UTIL', related: ['uptime'], desc: "現在の日時を表示します。", usage: "date", examples: [{ cmd: "date", desc: "現在時刻の確認" }] },
+        uptime: { cat: 'UTIL', related: ['date'], desc: "Tells how long the system has been running.", usage: "uptime" },
+        xargs: { cat: 'UTIL', related: ['echo'], desc: "Builds and executes command lines from standard input.", usage: "xargs <cmd>" },
+        awk: { cat: 'UTIL', related: ['grep'], desc: "テキストの加工などを行うデータ処理言語です。基本構文のみサポート。", usage: "awk '<prog>' <file>", examples: [{ cmd: "awk '{print $1}' log.txt", desc: "各行の1番目の単語を抽出" }] },
+                dir: { cat: 'UTIL', related: ['ls'], desc: "Lists directory contents (alias for ls).", usage: "dir [path]" },
+        
+        exit: { cat: 'SYS', related: ['quit', 'clear'], desc: "Exits interactive modes (e.g. AI Agent).", usage: "exit" },
+        quit: { cat: 'SYS', related: ['exit'], desc: "Exits interactive modes (alias for exit).", usage: "quit" },
+        
+        "for": { cat: 'EXEC', related: ['if', 'function'], desc: "Loop construct (for in do done).", usage: "for i in a b c; do echo $i; done" },
+        "if": { cat: 'EXEC', related: ['for', 'function'], desc: "Conditional construct (if [ cond ]; then fi).", usage: "if [ -z \$A ]; then echo a; fi" },
+        "function": { cat: 'EXEC', related: ['for', 'if'], desc: "Defines a custom shell function.", usage: "function f() { echo \$1; }" },
+
+        web: { cat: 'UI', related: ['preview', 'theme'], desc: "Mounts HTML to virtual monitor.", usage: "web <file> | web off" },
+        preview: { cat: 'UI', related: ['web'], desc: "Mounts HTML to virtual monitor.", usage: "preview <file> | preview off" },
+        theme: { cat: 'UI', related: ['themes', 'maketheme'], desc: "ターミナルのテーマカラーを変更します。", usage: "theme <name>", examples: [{ cmd: "theme matrix", desc: "テーマをmatrixに変更" }, { cmd: "theme hacker", desc: "Hackerテーマへ" }] },
+        themes: { cat: 'UI', related: ['theme', 'maketheme'], desc: "Shows available themes.", usage: "themes" },
+        maketheme: { cat: 'UI', related: ['theme', 'themes'], desc: "オリジナルテーマを作成できるウィザードを起動します。", usage: "maketheme", examples: [{ cmd: "maketheme", desc: "対話型でテーマ作成スタート" }] },
+        lang: { cat: 'UI', related: ['clear'], desc: "Switches system language.", usage: "lang [ja|en]" },
+        clear: { cat: 'UI', related: ['history'], desc: "ターミナルの出力画面をすべてクリアし初期状態に戻します。", usage: "clear", examples: [{ cmd: "clear", desc: "画面のお掃除" }] },
+        
+        su: { cat: 'SYS', related: ['whoami'], desc: "ユーザー名として表示されるエイリアスを変更します。", usage: "su <username>", examples: [{ cmd: "su admin", desc: "これ以降あなたのユーザー名がadminになります" }] },
+        whoami: { cat: 'SYS', related: ['su'], desc: "Prints active user handle.", usage: "whoami" },
+        export: { cat: 'SYS', related: ['env', 'printenv'], desc: "環境変数を設定します。", usage: "export KEY=value", examples: [{ cmd: "export FOO=bar", desc: "FOOにbarを代入" }] },
+        env: { cat: 'SYS', related: ['export', 'printenv'], desc: "現在設定されている環境変数の一覧を表示します。", usage: "env", examples: [{ cmd: "env", desc: "一覧表示" }] },
+        printenv: { cat: 'SYS', related: ['export', 'env'], desc: "Prints environment variables.", usage: "printenv" },
+        alias: { cat: 'SYS', related: ['export', 'ls'], desc: "コマンドのエイリアス(別名)を新しく定義します。", usage: "alias <name>=\"<cmd>\"", examples: [{ cmd: "alias ll=\"ls -l\"", desc: "llでls -lを実行できるようにします。" }, { cmd: "alias", desc: "登録済みの一覧を表示" }] },
+        history: { cat: 'SYS', related: ['clear'], desc: "Prints command history.", usage: "history" },
+        help: { cat: 'SYS', related: [], desc: "Prints help manual.", usage: "help [cmd]" }
+      
