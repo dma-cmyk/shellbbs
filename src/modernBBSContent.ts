@@ -1584,11 +1584,11 @@ export const modernBBSContent = `<!DOCTYPE html>
             <div class="post-header">
               <div class="post-avatar" style="background: \${avatarColor}">\${initialLetter}</div>
               <span class="post-number" onclick="insertAnchor(\${num})" title="このレスに返信">\${num}</span>
-              <span class="post-author">\${escapeHTML(authorName)}</span>
-              <span class="post-date">
-                \${formattedDate}
-                \${p.userId ? ' <span class="post-id" style="color: var(--secondary); font-size: 10px; margin-left: 6px;">ID:' + escapeHTML(p.userId) + '</span>' : ''}
+              <span class="post-author">
+                \${escapeHTML(authorName)}
+                \${p.userId ? ' <span class="post-id" style="color: var(--secondary); font-size: 10px; margin-left: 6px; font-weight: normal;">ID:' + escapeHTML(p.userId) + '</span>' : ''}
               </span>
+              <span class="post-date">\${formattedDate}</span>
             </div>
             <div class="post-body">\${parsedContent}</div>
           \`;
