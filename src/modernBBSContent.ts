@@ -730,6 +730,102 @@ export const modernBBSContent = `<!DOCTYPE html>
     ::-webkit-scrollbar-thumb:hover {
       background: rgba(255,255,255,0.2);
     }
+
+    .back-to-threads-btn {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .header-logo {
+        justify-content: center;
+      }
+
+      .header-controls {
+        gap: 6px;
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+      }
+
+      .autoload-timer-wrapper {
+        font-size: 11px;
+        padding: 3px 6px;
+        white-space: nowrap;
+      }
+
+      .modern-select {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      .sidebar {
+        width: 100% !important;
+        border-right: none;
+      }
+
+      .content-area {
+        width: 100% !important;
+      }
+
+      /* モバイルでの表示切り替え */
+      body.thread-selected .sidebar {
+        display: none !important;
+      }
+
+      body.thread-selected .content-area {
+        display: flex !important;
+      }
+
+      body:not(.thread-selected) .sidebar {
+        display: flex !important;
+      }
+
+      body:not(.thread-selected) .content-area {
+        display: none !important;
+      }
+
+      .back-to-threads-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .post-card {
+        max-width: 95%;
+        padding: 12px;
+      }
+
+      .composer-grid {
+        gap: 8px;
+      }
+
+      .composer-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .composer-input-group {
+        max-width: none !important;
+      }
+
+      .btn-submit-post {
+        padding: 6px 14px;
+        font-size: 11.5px;
+      }
+
+      .btn-secondary {
+        padding: 6px 10px;
+        font-size: 11.5px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -789,6 +885,12 @@ export const modernBBSContent = `<!DOCTYPE html>
       </div>
 
       <div id="thread-view" style="display: none; flex: 1; flex-direction: column; overflow: hidden;">
+        <div class="thread-view-header" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: rgba(30, 41, 59, 0.4);">
+          <button class="btn-secondary back-to-threads-btn" onclick="backToThreadList()" style="padding: 4px 10px; font-size: 11px;">
+            <span>⬅</span> 一覧
+          </button>
+          <span id="active-thread-title" style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; color: var(--secondary);"></span>
+        </div>
         <div class="posts-container" id="posts-container">
           <!-- Loaded dynamically -->
         </div>
@@ -1277,11 +1379,30 @@ export const modernBBSContent = `<!DOCTYPE html>
       document.getElementById('no-thread-selected').style.display = 'none';
       document.getElementById('thread-view').style.display = 'flex';
       
+      // モバイル用の切り替えクラス
+      document.body.classList.add('thread-selected');
+
+      // スレッドタイトルを設定
+      const activeTitleSpan = document.getElementById('active-thread-title');
+      if (activeTitleSpan && knownThreads[id]) {
+        activeTitleSpan.textContent = knownThreads[id];
+      } else if (activeTitleSpan) {
+        activeTitleSpan.textContent = "スレッド表示中";
+      }
+      
       const items = document.querySelectorAll('.thread-item');
       items.forEach(el => el.classList.remove('active'));
       
       await loadThreads();
       await loadPosts();
+    }
+
+    function backToThreadList() {
+      activeThreadId = null;
+      document.body.classList.remove('thread-selected');
+      document.getElementById('no-thread-selected').style.display = 'flex';
+      document.getElementById('thread-view').style.display = 'none';
+      loadThreads();
     }
 
     window.scrollToPost = function(event, num) {
