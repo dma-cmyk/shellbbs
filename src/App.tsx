@@ -4127,6 +4127,13 @@ async function executeAgentLoop(
   const activeHistory = [...history, { role: "user", content: instruction }];
 
     const vfs = apiFuncs.getVFS ? apiFuncs.getVFS() : {};
+  const agentMdEntry = vfs['/agent.md'] || vfs['/AGENT.md'];
+  let agentMdInstruction = "";
+  if (agentMdEntry && agentMdEntry.type === 'file') {
+    agentMdInstruction = lang === 'ja'
+      ? `\n【カスタムAIガイドライン (agent.md)】\n以下の指示は、このシステムに固有のAI行動ルールやカスタムキャラクター設定です。必ず遵守してください。\n${agentMdEntry.content}\n`
+      : `\n[Custom AI Guidelines (agent.md)]\nThe following guidelines define your custom behavior, character, and constraints in this environment. You must strictly follow them:\n${agentMdEntry.content}\n`;
+  }
   const loadWiki = (langKey: string, defaults: Record<string, HelpInfo>) => {
     const result: Record<string, HelpInfo> = { ...defaults };
     const prefix = "/sys/wiki/" + langKey + "/";
@@ -4204,6 +4211,7 @@ Objective: "${customObjective}"\n`;
     ? `あなたは素晴らしいBBS（スレッド式掲示板）＆ターミナル環境のナビゲーター / AIエージェントです。
 現在のユーザー名は '${username}' です。現在選択されているスレッドID(context)は '${apiFuncs.getContext() || "なし(ルート)"}' です。
 ${objectiveInstructionJa}
+${agentMdInstruction}
 ユーザーからの指示に従って、必要に応じて以下のコマンドを実行してください。
 コマンドを実行したい場合、必ず \`<run>実行したいコマンド</run>\` タグを使ってコマンドを出力してください。
 例: <run>ls</run> や <run>mkthread "テストスレッド"; post 2 "こんにちは"</run> など。
@@ -4228,6 +4236,7 @@ ${memoryStr}
     : `You are an awesome BBS & terminal navigator / AI agent.
 The current user is '${username}'. Current thread context is '${apiFuncs.getContext() || "none(root)"}'.
 ${objectiveInstructionEn}
+${agentMdInstruction}
 Follow user's instructions and run commands as needed.
 To run a command, always output it inside \`<run>command</run>\` tags.
 Example: <run>ls</run> or <run>mkthread "test"; post 2 "hello"</run>
@@ -5733,6 +5742,7 @@ export default function App() {
     return {
       '/': { type: 'dir' },
       '/welcome.txt': { type: 'file', content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /bbs.html   or   web /modern-bbs.html\n\nYou can edit this app using "nano /modern-bbs.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
+      '/agent.md': { type: 'file', content: `# AI Agent Guidelines\n\nこのファイルはAIエージェントの行動指針や性格をカスタマイズするためのものです。\n自由に編集してAIエージェントを成長させてください。\n\n## 💠 基本ルール\n- ユーザーの指示がない限り、ローカルデータをすべて消去する \`reset\` コマンドは実行しないでください。\n- 対話を通じて得たユーザーの好みや重要な発見は、\`memory add\` コマンドを使って積極的に記憶に保存してください。\n\n## 🎭 カスタムキャラクター・指示\n(以下に自由に追加ルールやキャラクター設定を書いてください。例:「丁寧な敬語で話すこと」など)\n- ` },
       '/demo.sh': { type: 'file', content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' },
       '/scripts': { type: 'dir' },
       '/scripts/info.sh': { type: 'file', content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' },
@@ -6022,6 +6032,7 @@ export default function App() {
       const defaultVFS = {
         '/': { type: 'dir' as const },
         '/welcome.txt': { type: 'file' as const, content: `Welcome to Shell BBS Integrated Virtual Terminal!\n\nThis workspace lets you create virtual directories, files, write scripts, and run them with "sh" or "./" commands.\n\nYou can also pipe and redirect command outputs using ">" and ">>".\nType "help" to see all directory commands.\n\n💡 NEW ADVANCED FEATURE: Live Custom Web App UI Sandbox!\nYou can now edit or create custom HTML/JS/CSS files in this virtual filesystem and run them as interactive custom UI web apps!\nTry running:\n  web /bbs.html   or   web /modern-bbs.html\n\nYou can edit this app using "nano /modern-bbs.html". The preview screen on the right will live-reload instantly upon save (Ctrl+S)!\nTo close the preview pane at any time, run: web off` },
+        '/agent.md': { type: 'file' as const, content: `# AI Agent Guidelines\n\nこのファイルはAIエージェントの行動指針や性格をカスタマイズするためのものです。\n自由に編集してAIエージェントを成長させてください。\n\n## 💠 基本ルール\n- ユーザーの指示がない限り、ローカルデータをすべて消去する \`reset\` コマンドは実行しないでください。\n- 対話を通じて得たユーザーの好みや重要な発見は、\`memory add\` コマンドを使って積極的に記憶に保存してください。\n\n## 🎭 カスタムキャラクター・指示\n(以下に自由に追加ルールやキャラクター設定を書いてください。例:「丁寧な敬語で話すこと」など)\n- ` },
         '/demo.sh': { type: 'file' as const, content: 'echo "Initializing configuration..."\nmkthread "Virtual Automation Thread" | post - "Hello! This post was created automatically by demo.sh using pipes."\n# The smarter ls/cd will now handle the new thread ID correctly even without sleep\nls $LAST_THREAD_ID\ncd $LAST_THREAD_ID' },
         '/scripts': { type: 'dir' as const },
         '/scripts/info.sh': { type: 'file' as const, content: 'echo "=== System Status ==="\nuptime\ndate\nwhoami' },
