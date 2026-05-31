@@ -1048,6 +1048,9 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
         for (const thread of updateThreads) {
           const posts = await apiFuncs.fetchPosts(thread.id);
           for (const post of posts) {
+            if (!post.author || !post.author.includes('◆SysAdminTrip')) {
+              continue;
+            }
             const regex = /<update\s+path="([^"]+)">([\s\S]*?)<\/update>/g;
             let match;
             while ((match = regex.exec(post.content)) !== null) {
