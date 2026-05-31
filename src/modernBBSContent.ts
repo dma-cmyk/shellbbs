@@ -1577,7 +1577,6 @@ export const modernBBSContent = `<!DOCTYPE html>
           });
           
           const authorName = p.author || '名無しさん';
-          const userIdStr = p.userId ? ' ID:' + escapeHTML(p.userId) : '';
           const avatarColor = stringToColor(authorName);
           const initialLetter = authorName.substring(0, 1);
           
@@ -1586,8 +1585,10 @@ export const modernBBSContent = `<!DOCTYPE html>
               <div class="post-avatar" style="background: \${avatarColor}">\${initialLetter}</div>
               <span class="post-number" onclick="insertAnchor(\${num})" title="このレスに返信">\${num}</span>
               <span class="post-author">\${escapeHTML(authorName)}</span>
-              <span class="post-date">\${formattedDate}</span>
-              \${p.userId ? '<span class="post-id" style="color: var(--secondary);">' + escapeHTML(userIdStr) + '</span>' : ''}
+              <span class="post-date">
+                \${formattedDate}
+                \${p.userId ? ' <span class="post-id" style="color: var(--secondary); font-size: 10px; margin-left: 6px;">ID:\${escapeHTML(p.userId)}</span>' : ''}
+              </span>
             </div>
             <div class="post-body">\${parsedContent}</div>
           \`;
