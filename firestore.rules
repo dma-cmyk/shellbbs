@@ -20,7 +20,8 @@ service cloud.firestore {
 
     match /posts/{postId} {
       allow read, list, get: if true;
-      allow create: if request.resource.data.keys().hasAll(['threadId', 'author', 'content', 'timestamp']) &&
+      allow create: if request.resource.data.threadId != 'jddfxg0' &&
+                    request.resource.data.keys().hasAll(['threadId', 'author', 'content', 'timestamp']) &&
                     (request.resource.data.keys().size() == 4 || 
                      (request.resource.data.keys().size() == 5 && 
                       'userId' in request.resource.data &&
