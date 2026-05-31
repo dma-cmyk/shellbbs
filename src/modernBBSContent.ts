@@ -867,6 +867,54 @@ export const modernBBSContent = `<!DOCTYPE html>
         padding: 4px 10px !important;
         font-size: 11px !important;
       }
+
+      /* 投稿ヘッダーのモバイル最適化 */
+      .post-header {
+        display: grid !important;
+        grid-template-columns: auto auto 1fr;
+        grid-template-rows: auto auto;
+        gap: 4px 8px !important;
+        margin-bottom: 8px !important;
+        align-items: center;
+      }
+
+      .post-avatar {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 13px !important;
+      }
+
+      .post-number {
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 11px !important;
+        padding: 1px 5px !important;
+      }
+
+      .post-author {
+        grid-column: 3;
+        grid-row: 1;
+        font-size: 12px !important;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .post-date {
+        grid-column: 2 / span 2;
+        grid-row: 2;
+        font-size: 10.5px !important;
+        color: var(--text-muted);
+      }
+
+      .post-id {
+        display: inline-block;
+        margin-left: 6px;
+        font-size: 9.5px !important;
+      }
     }
   </style>
 </head>
