@@ -91,6 +91,15 @@ let isDbCheckDone = false;
 
 async function checkAndFallbackDb() {
   if (isDbCheckDone) return;
+  
+  // If a custom firestoreDatabaseId is explicitly configured, we should strictly use it
+  // and avoid falling back to the default database on temporary connection or loading errors.
+  if (firebaseConfig.firestoreDatabaseId) {
+    console.log(`Firestore custom database ID [${firebaseConfig.firestoreDatabaseId}] is configured. Strictly using custom database.`);
+    isDbCheckDone = true;
+    return;
+  }
+
   if (isDbCheckInProgress) return;
   isDbCheckInProgress = true;
   try {
@@ -105,7 +114,7 @@ async function checkAndFallbackDb() {
       errMsg.includes("Database") ||
       errMsg.includes("NOT_FOUND")
     ) {
-      console.warn(`Firestore custom database ID [${firebaseConfig.firestoreDatabaseId}] check failed. Falling back to (default) database. Error: ${errMsg}`);
+      console.warn(`Firestore check failed. Falling back to (default) database. Error: ${errMsg}`);
       try {
         db = getFirestore(firebaseApp);
       } catch (innerErr) {
