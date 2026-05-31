@@ -145,36 +145,7 @@ function handleFirestoreError(res: express.Response, error: unknown, operationTy
   res.status(500).json({ error: error instanceof Error ? error.message : String(error), details: errInfo });
 }
 
-async function seedDatabaseIfEmpty() {
-  await checkAndFallbackDb();
-  try {
-    const threadsSnap = await getDocs(collection(db, "threads"));
-    if (threadsSnap.empty) {
-      console.log("Firestore threads collection is empty. Seeding default data...");
-      const defaultThreadDoc = doc(collection(db, "threads"), "1");
-      await setDoc(defaultThreadDoc, {
-        title: "General Discussion",
-        author: "root",
-        createdAt: new Date().toISOString()
-      });
-      console.log("Seeded default thread.");
-    }
-    const postsSnap = await getDocs(collection(db, "posts"));
-    if (postsSnap.empty) {
-      console.log("Firestore posts collection is empty. Seeding default data...");
-      const defaultPostDoc = doc(collection(db, "posts"), "1");
-      await setDoc(defaultPostDoc, {
-        threadId: "1",
-        author: "root",
-        content: "Welcome to the root node. Keep your logs clean and your scripts optimized.",
-        timestamp: new Date().toISOString()
-      });
-      console.log("Seeded default post.");
-    }
-  } catch (error) {
-    console.error("Error seeding Firestore database on startup:", error);
-  }
-}
+// Database seeding is disabled to prevent automatic thread creation on startup
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -196,10 +167,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Seed database on startup
-seedDatabaseIfEmpty().catch(err => {
-  console.error("Database seeding failed:", err);
-});
+// Database seeding disabled
 
 app.get("/api/threads", async (req, res) => {
   await checkAndFallbackDb();
