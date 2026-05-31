@@ -1210,24 +1210,32 @@ export const defaultBBSContent = `<!DOCTYPE html>
         if (!container) return;
 
         const originalScrollTop = container.scrollTop;
-        const originalScrollHeight = container.scrollHeight;
         const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight < 120);
+        const hasExistingPosts = container.querySelector('.post-card') !== null;
 
         let newPostsCount = 0;
         if (!isThreadChanged && posts && posts.length > knownPostsCount) {
           newPostsCount = posts.length - knownPostsCount;
         }
 
-        container.innerHTML = '';
+        if (isThreadChanged || !hasExistingPosts) {
+          container.innerHTML = '';
+        }
         
         if (!posts || posts.length === 0) {
-          container.innerHTML = '<div style="color: #666; text-align: center; padding-top: 40px; font-size: 13px;">まだレスがありません。最初のレスを書き込みましょう！</div>';
+          if (isThreadChanged || !hasExistingPosts) {
+            container.innerHTML = '<div style="color: #666; text-align: center; padding-top: 40px; font-size: 13px;">まだレスがありません。最初のレスを書き込みましょう！</div>';
+          }
           lastLoadedThreadId = activeThreadId;
           knownPostsCount = 0;
           return;
         }
 
-        posts.forEach((p, idx) => {
+        const renderStartIndex = (isThreadChanged || !hasExistingPosts) ? 0 : knownPostsCount;
+        const postsToRender = posts.slice(renderStartIndex);
+
+        postsToRender.forEach((p, relativeIdx) => {
+          const idx = renderStartIndex + relativeIdx;
           const num = idx + 1;
           const card = document.createElement('div');
           
