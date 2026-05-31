@@ -4143,6 +4143,51 @@ async function executePipeline(pipelineStr: string, username: string, apiFuncs: 
   return stdin;
 }
 
+function extractTextFromReact(node: any): string {
+  if (node === null || node === undefined) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (typeof node === 'boolean') return '';
+  
+  if (Array.isArray(node)) {
+    return node.map(extractTextFromReact).join('');
+  }
+  
+  if (typeof node === 'object') {
+    if (node.props) {
+      if (node.props.children) {
+        return extractTextFromReact(node.props.children);
+      }
+    }
+  }
+  return '';
+}
+
+function cleanTextTags(text: string): string {
+  if (!text) return "";
+  let cleaned = text.replace(/<[^>]*>/g, "");
+  cleaned = cleaned.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, "");
+  return cleaned;
+}
+
+function cleanCommandOutputForAI(c: any): string {
+  if (!c) return "";
+  
+  if (c && typeof c === 'object' && c._isUIObj) {
+    return cleanTextTags(c.text);
+  }
+  
+  if (typeof c === 'object') {
+    const text = extractTextFromReact(c);
+    return cleanTextTags(text);
+  }
+  
+  if (typeof c === 'string' || typeof c === 'number') {
+    return cleanTextTags(String(c));
+  }
+  
+  return "";
+}
+
 function cleanAgentReply(text: string): string {
   if (!text) return "";
   let clean = text;
@@ -4248,8 +4293,15 @@ async function executeAgentLoop(
   username: string,
   history: any[] = []
 ): Promise<any[]> {
-  const lang = apiFuncs.getLang();
-  const startMsg = lang === 'ja'
+  const agentApiFuncs = {
+    ...apiFuncs,
+    getLang: () => 'en',
+    executeNested: async (nestedCmd: string) => {
+      return await executePipeline(nestedCmd, username, agentApiFuncs);
+    }
+  };
+  const lang = 'en';
+  const startMsg = apiFuncs.getLang() === 'ja'
     ? "🤖 AIエージェントが処理を開始しました..."
     : "🤖 AI Agent starts processing your request...";
   
@@ -4391,7 +4443,9 @@ You are strictly required to actively and automatically build and maintain a per
 - You are highly encouraged to chain your main tasks with a final self-directed \`memory\` save command to log current progress or preferences.
 
 Once you output <run>...</run>, the system will auto-execute it and feed back the results. Repeat as needed to achieve the goal.
-Keep responses concise, clear and professional.
+[CRITICAL] Under all circumstances, your final verbal responses (replies to the user) MUST be written in the language corresponding to '${apiFuncs.getLang() === 'ja' ? 'Japanese' : 'English'}'.
+Also, if the user requested a specific character or persona in agent.md, you must strictly follow that persona in your replies.
+Keep responses concise and clear.
 
 [CRITICAL]: If the user's input is a simple greeting, chit-chat, or a question that does not require executing a command, DO NOT output a \`<run>\` tag unless you identify high-value insights that should be memorized. If so, reply to the user and append \`<run>memory add ...</run>\` to persist that insight.`;
 
@@ -4470,22 +4524,27 @@ Keep responses concise, clear and professional.
         ]);
 
         // Execute command
-        const executionResult = await apiFuncs.executeNested(cmdToRun);
+        const executionResult = await agentApiFuncs.executeNested(cmdToRun);
         
         // Output execution results to screen
         if (executionResult && executionResult.length > 0) {
           apiFuncs.setOutput((prev: any) => [
             ...prev,
-            ...executionResult.map(c => ({ id: Math.random().toString(), content: (c && c._isUIObj) ? c.ui : c }))
+            ...executionResult.map(c => {
+               const textOut = cleanCommandOutputForAI(c);
+               if (textOut) {
+                 return {
+                   id: Math.random().toString(),
+                   content: <div className="whitespace-pre-wrap font-mono text-zinc-300 leading-relaxed py-1">{textOut}</div>
+                 };
+               }
+               return { id: Math.random().toString(), content: (c && c._isUIObj) ? c.ui : c };
+            })
           ]);
         }
 
         // Give execution feedback to AI
-        const agentTextOutput = executionResult.map(c => {
-           if (c && c._isUIObj) return c.text;
-           if (typeof c === 'string' || typeof c === 'number') return String(c);
-           return "[UI Object Rendered]";
-        }).join('\n');
+        const agentTextOutput = executionResult.map(c => cleanCommandOutputForAI(c)).join('\n');
         
         const feedbackText = `【System Feedback: Command Executed】: ${cmdToRun}\n【Output】:\n${agentTextOutput || "(No output)"}`;
         activeHistory.push({ role: "user", content: feedbackText });
@@ -6406,6 +6465,14 @@ export default function App() {
     setPendingAgentCmd(null);
     setPendingAgentHistory(null);
 
+    const agentApiFuncs = {
+      ...apiFuncs,
+      getLang: () => 'en',
+      executeNested: async (nestedCmd: string) => {
+        return await executePipeline(nestedCmd, username, agentApiFuncs);
+      }
+    };
+
     const isJa = langRef.current === 'ja';
     setOutput(prev => [
       ...prev,
@@ -6421,20 +6488,25 @@ export default function App() {
     ]);
 
     try {
-      const executionResult = await apiFuncs.executeNested(cmdToRun);
+      const executionResult = await agentApiFuncs.executeNested(cmdToRun);
 
       if (executionResult && executionResult.length > 0) {
         setOutput(prev => [
           ...prev,
-          ...executionResult.map(c => ({ id: Math.random().toString(), content: (c && c._isUIObj) ? c.ui : c }))
+          ...executionResult.map(c => {
+             const textOut = cleanCommandOutputForAI(c);
+             if (textOut) {
+               return {
+                 id: Math.random().toString(),
+                 content: <div className="whitespace-pre-wrap font-mono text-zinc-300 leading-relaxed py-1">{textOut}</div>
+               };
+             }
+             return { id: Math.random().toString(), content: (c && c._isUIObj) ? c.ui : c };
+          })
         ]);
       }
 
-      const agentTextOutput = executionResult.map(c => {
-         if (c && c._isUIObj) return c.text;
-         if (typeof c === 'string' || typeof c === 'number') return String(c);
-         return "[UI Object Rendered]";
-      }).join('\n');
+      const agentTextOutput = executionResult.map(c => cleanCommandOutputForAI(c)).join('\n');
       
       const feedbackText = `【System Feedback: Command Executed】: ${cmdToRun}\n【Output】:\n${agentTextOutput || "(No output)"}`;
       const nextHistory = [...currentHistory, { role: "user", content: feedbackText }];
