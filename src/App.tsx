@@ -5736,6 +5736,9 @@ export default function App() {
         delete parsed['/hello_world.html'];
         delete parsed['/app_paint.html'];
         delete parsed['/app_todo.html'];
+        if (!parsed['/agent.md'] && !parsed['/AGENT.md']) {
+          parsed['/agent.md'] = { type: 'file', content: `# AI Agent Guidelines\n\nこのファイルはAIエージェントの行動指針や性格をカスタマイズするためのものです。\n自由に編集してAIエージェントを成長させてください。\n\n## 💠 基本ルール\n- ユーザーの指示がない限り、ローカルデータをすべて消去する \`reset\` コマンドは実行しないでください。\n- 対話を通じて得たユーザーの好みや重要な発見は、\`memory add\` コマンドを使って積極的に記憶に保存してください。\n\n## 🎭 カスタムキャラクター・指示\n(以下に自由に追加ルールやキャラクター設定を書いてください。例:「丁寧な敬語で話すこと」など)\n- ` };
+        }
         return parsed;
       } catch (e) {}
     }
