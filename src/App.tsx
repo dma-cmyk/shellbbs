@@ -1025,6 +1025,22 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
           return [isJa ? "システム配信スレッドが見つかりませんでした。" : "No system update threads found on BBS."];
         }
 
+        const mergeAgentMd = (local: string, incoming: string): string => {
+          const splitIdx = incoming.search(/## 🎭/);
+          const base = splitIdx !== -1 ? incoming.substring(0, splitIdx) : incoming;
+          const localMatch = local.match(/(## 🎭[\s\S]*)/);
+          const incomingMatch = incoming.match(/(## 🎭[\s\S]*)/);
+          let custom = "";
+          if (localMatch && localMatch[1]) {
+            custom = localMatch[1];
+          } else if (incomingMatch && incomingMatch[1]) {
+            custom = incomingMatch[1];
+          } else {
+            custom = "## 🎭 カスタムキャラクター・指示\n(以下に自由に追加ルールやキャラクター設定を書いてください)\n- ";
+          }
+          return base.trim() + "\n\n" + custom.trim() + "\n";
+        };
+
         let updatedFiles: string[] = [];
         const vfsObj = apiFuncs.getVFS ? apiFuncs.getVFS() : {};
         const newVfs = { ...vfsObj };
@@ -1052,7 +1068,14 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
                 }
               }
 
-              newVfs[normalizedPath] = { type: 'file', content: fileContent };
+              if (normalizedPath.toLowerCase() === '/agent.md' && newVfs[normalizedPath] && newVfs[normalizedPath].content) {
+                newVfs[normalizedPath] = { 
+                  type: 'file', 
+                  content: mergeAgentMd(newVfs[normalizedPath].content, fileContent) 
+                };
+              } else {
+                newVfs[normalizedPath] = { type: 'file', content: fileContent };
+              }
               updatedFiles.push(normalizedPath);
             }
           }
