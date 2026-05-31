@@ -1045,14 +1045,45 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
         const vfsObj = apiFuncs.getVFS ? apiFuncs.getVFS() : {};
         const newVfs = { ...vfsObj };
 
+        // Get last applied update timestamp
+        let lastAppliedTime = 0;
+        const statusFile = newVfs['/sys/update_status.json'];
+        if (statusFile && statusFile.content) {
+          try {
+            const statusData = JSON.parse(statusFile.content);
+            if (statusData.lastAppliedTimestamp) {
+              lastAppliedTime = new Date(statusData.lastAppliedTimestamp).getTime();
+            }
+          } catch (e) {
+            console.warn("Failed to parse update_status.json", e);
+          }
+        }
+
+        let maxAppliedTime = lastAppliedTime;
+        let maxAppliedTimestamp = "";
+
         for (const thread of updateThreads) {
           const posts = await apiFuncs.fetchPosts(thread.id);
-          for (const post of posts) {
+          
+          // Sort posts chronologically to apply them in correct order
+          const sortedPosts = [...posts].sort((a: any, b: any) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+
+          for (const post of sortedPosts) {
             if (!post.author || !post.author.includes('◆SysAdminTrip')) {
               continue;
             }
+
+            const postTime = new Date(post.timestamp).getTime();
+            if (postTime <= lastAppliedTime) {
+              continue; // Skip already applied updates
+            }
+
             const regex = /<update\s+path="([^"]+)">([\s\S]*?)<\/update>/g;
             let match;
+            let postHasUpdates = false;
+
             while ((match = regex.exec(post.content)) !== null) {
               const filePath = match[1];
               const fileContent = match[2];
@@ -1080,11 +1111,27 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
                 newVfs[normalizedPath] = { type: 'file', content: fileContent };
               }
               updatedFiles.push(normalizedPath);
+              postHasUpdates = true;
+            }
+
+            if (postHasUpdates) {
+              if (postTime > maxAppliedTime) {
+                maxAppliedTime = postTime;
+                maxAppliedTimestamp = post.timestamp;
+              }
             }
           }
         }
 
         if (updatedFiles.length > 0) {
+          if (!newVfs['/sys']) {
+            newVfs['/sys'] = { type: 'dir' };
+          }
+          newVfs['/sys/update_status.json'] = {
+            type: 'file',
+            content: JSON.stringify({ lastAppliedTimestamp: maxAppliedTimestamp }, null, 2)
+          };
+
           apiFuncs.setVFS(newVfs);
           return [
             isJa 
