@@ -806,24 +806,66 @@ export const modernBBSContent = `<!DOCTYPE html>
         gap: 8px;
       }
 
+      .footer-composer {
+        padding: 8px 12px !important;
+      }
+
+      .composer-grid {
+        gap: 6px !important;
+      }
+
       .composer-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
+        flex-direction: row !important;
+        gap: 8px !important;
       }
 
       .composer-input-group {
         max-width: none !important;
+        padding: 2px 6px !important;
+      }
+
+      .composer-input-group label {
+        font-size: 9px !important;
+        margin-right: 4px !important;
+      }
+
+      .composer-input-group input {
+        font-size: 11.5px !important;
+      }
+
+      .composer-textarea {
+        height: 38px !important;
+        padding: 6px 10px !important;
+        font-size: 12.5px !important;
+        border-radius: 8px !important;
+      }
+
+      .composer-actions {
+        margin-top: 2px;
+      }
+
+      #ai-btn {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+      }
+
+      #ai-btn span.btn-text {
+        font-size: 0;
+      }
+
+      #ai-btn span.btn-text::before {
+        content: "AI下書き";
+        font-size: 11px;
       }
 
       .btn-submit-post {
-        padding: 6px 14px;
-        font-size: 11.5px;
+        padding: 4px 12px !important;
+        font-size: 11px !important;
       }
 
       .btn-secondary {
-        padding: 6px 10px;
-        font-size: 11.5px;
+        padding: 4px 10px !important;
+        font-size: 11px !important;
       }
     }
   </style>
@@ -914,7 +956,7 @@ export const modernBBSContent = `<!DOCTYPE html>
             
             <div class="composer-actions">
               <button class="btn-secondary" id="ai-btn" onclick="askAiToDraft()">
-                <span>✨</span> AIアシスタントに下書きを任せる
+                <span>✨</span> <span class="btn-text">AIアシスタントに下書きを任せる</span>
               </button>
               <button class="btn-submit-post" onclick="submitPost()">書き込む</button>
             </div>
