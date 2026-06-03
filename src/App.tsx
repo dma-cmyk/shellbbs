@@ -5049,7 +5049,14 @@ Keep responses concise and clear.
         ]);
 
         // Execute command
-        const executionResult = await agentApiFuncs.executeNested(cmdToRun);
+        const subCmds = splitIntoStatements(cmdToRun);
+        const executionResult = [];
+        for (const subCmd of subCmds) {
+          const res = await agentApiFuncs.executeNested(subCmd);
+          if (res && res.length > 0) {
+            executionResult.push(...res);
+          }
+        }
         
         // Output execution results to screen
         if (executionResult && executionResult.length > 0) {
@@ -7071,7 +7078,14 @@ export default function App() {
     ]);
 
     try {
-      const executionResult = await agentApiFuncs.executeNested(cmdToRun);
+      const subCmds = splitIntoStatements(cmdToRun);
+      const executionResult = [];
+      for (const subCmd of subCmds) {
+        const res = await agentApiFuncs.executeNested(subCmd);
+        if (res && res.length > 0) {
+          executionResult.push(...res);
+        }
+      }
 
       if (executionResult && executionResult.length > 0) {
         setOutput(prev => [
