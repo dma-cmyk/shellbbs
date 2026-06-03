@@ -1529,17 +1529,6 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
       return [FORTUNES[Math.floor(Math.random() * FORTUNES.length)]];
     case 'github': {
       const sub = args[0];
-      if (!sub) {
-        return [
-          "github: usage:",
-          "  github login                      - Log in via GitHub OAuth (Auto Token)",
-          "  github config token <YOUR_TOKEN>  - Set GitHub Personal Access Token (Manual)",
-          "  github config repo <OWNER/REPO>   - Set Target Repository (e.g. username/reponame)",
-          "  github config show                 - Show Current Config",
-          "  github push <COMMIT_MESSAGE>      - Push VFS files to GitHub"
-        ];
-      }
-      
       const configKey = "shellbbs_github_config";
       let config = { token: "", repo: "" };
       try {
@@ -1547,6 +1536,228 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
         if (stored) config = JSON.parse(stored);
       } catch (e) {}
 
+      // --- Helper Functions ---
+      const handleCreateRepo = async (repoName: string, visibility: string) => {
+        if (!repoName) {
+          return ["github: error: repository name is required."];
+        }
+        if (!config.token) {
+          return ["github: error: GitHub token must be configured first using 'github login'."];
+        }
+        
+        try {
+          const res = await fetch("https://api.github.com/user/repos", {
+            method: "POST",
+            headers: {
+              "Authorization": `token ${config.token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              name: repoName,
+              private: visibility === 'private',
+              auto_init: false
+            })
+          });
+          
+          if (!res.ok) {
+            const errText = await res.text();
+            return [`github: failed to create repository: ${errText}`];
+          }
+          
+          const data = await res.json();
+          config.repo = data.full_name;
+          localStorage.setItem(configKey, JSON.stringify(config));
+          
+          return [
+            `✅ GitHubリポジトリ "${data.full_name}" の作成に成功したわよ♡`,
+            `  URL: ${data.html_url}`,
+            `  自動的にターゲットリポジトリに設定されたわ。`,
+            `  すぐに "github push" を実行してファイルをアップロードできるわよ！`
+          ];
+        } catch (err: any) {
+          return [`github: failed to create repository: ${err.message || String(err)}`];
+        }
+      };
+
+      const handleDeleteRepo = async (repoName: string) => {
+        if (!repoName) {
+          return ["github: error: repository name is required."];
+        }
+        if (!config.token) {
+          return ["github: error: GitHub token must be configured first using 'github login'."];
+        }
+        
+        let owner = "";
+        let repo = repoName;
+        
+        if (repoName.includes("/")) {
+          const parts = repoName.split("/");
+          owner = parts[0];
+          repo = parts[1];
+        } else {
+          try {
+            const userRes = await fetch("https://api.github.com/user", {
+              headers: { "Authorization": `token ${config.token}` }
+            });
+            if (!userRes.ok) {
+              const errText = await userRes.text();
+              return [`github: failed to fetch current user info: ${errText}`];
+            }
+            const userData = await userRes.json();
+            owner = userData.login;
+          } catch (err: any) {
+            return [`github: failed to fetch user: ${err.message || String(err)}`];
+          }
+        }
+        
+        try {
+          const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `token ${config.token}`
+            }
+          });
+          
+          if (!res.ok) {
+            const errText = await res.text();
+            return [`github: failed to delete repository ${owner}/${repo}: ${errText}`];
+          }
+          
+          const fullPath = `${owner}/${repo}`;
+          if (config.repo === fullPath) {
+            config.repo = "";
+            localStorage.setItem(configKey, JSON.stringify(config));
+          }
+          
+          return [
+            `✅ GitHubリポジトリ "${fullPath}" の削除に成功したわよ！`,
+            `  すっきりしたわね。消したものは二度と戻らないから気をつけてね♡`
+          ];
+        } catch (err: any) {
+          return [`github: failed to delete repository: ${err.message || String(err)}`];
+        }
+      };
+
+      const handleListRepos = async () => {
+        if (!config.token) {
+          return ["github: error: GitHub token must be configured first using 'github login'."];
+        }
+        try {
+          const res = await fetch("https://api.github.com/user/repos?sort=updated&per_page=30", {
+            headers: { "Authorization": `token ${config.token}` }
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            return [`github: failed to list repositories: ${errText}`];
+          }
+          const repos = await res.json();
+          if (repos.length === 0) {
+            return ["github: no repositories found."];
+          }
+          const lines = ["Repositories for current user:"];
+          repos.forEach((r: any) => {
+            const vis = r.private ? "private" : "public";
+            lines.push(`  - ${r.full_name} (${vis}, updated: ${new Date(r.updated_at).toLocaleString()})`);
+          });
+          return lines;
+        } catch (err: any) {
+          return [`github: failed to list repositories: ${err.message || String(err)}`];
+        }
+      };
+
+      const handleListIssues = async () => {
+        if (!config.token) {
+          return ["github: error: GitHub token must be configured first."];
+        }
+        if (!config.repo) {
+          return ["github: error: Target repository is not configured. Use 'github config repo <owner/repo>' to set one."];
+        }
+        try {
+          const res = await fetch(`https://api.github.com/repos/${config.repo}/issues?state=all&per_page=30`, {
+            headers: { "Authorization": `token ${config.token}` }
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            return [`github: failed to list issues for ${config.repo}: ${errText}`];
+          }
+          const items = await res.json();
+          const issues = items.filter((item: any) => !item.pull_request);
+          if (issues.length === 0) {
+            return [`github: no issues found in ${config.repo}.`];
+          }
+          const lines = [`Issues in ${config.repo}:`];
+          issues.forEach((issue: any) => {
+            lines.push(`  #${issue.number} [${issue.state.toUpperCase()}] ${issue.title} (by ${issue.user.login})`);
+          });
+          return lines;
+        } catch (err: any) {
+          return [`github: failed to list issues: ${err.message || String(err)}`];
+        }
+      };
+
+      const handleCreateIssue = async (title: string, body: string) => {
+        if (!config.token) {
+          return ["github: error: GitHub token must be configured first."];
+        }
+        if (!config.repo) {
+          return ["github: error: Target repository is not configured. Use 'github config repo <owner/repo>' to set one."];
+        }
+        if (!title) {
+          return ["github: error: Issue title is required. Use -t or --title to specify."];
+        }
+        try {
+          const res = await fetch(`https://api.github.com/repos/${config.repo}/issues`, {
+            method: "POST",
+            headers: {
+              "Authorization": `token ${config.token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ title, body })
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            return [`github: failed to create issue: ${errText}`];
+          }
+          const issue = await res.json();
+          return [
+            `✅ Issue #${issue.number} "${issue.title}" の作成に成功したわよ！`,
+            `  URL: ${issue.html_url}`
+          ];
+        } catch (err: any) {
+          return [`github: failed to create issue: ${err.message || String(err)}`];
+        }
+      };
+
+      const handleListPRs = async () => {
+        if (!config.token) {
+          return ["github: error: GitHub token must be configured first."];
+        }
+        if (!config.repo) {
+          return ["github: error: Target repository is not configured. Use 'github config repo <owner/repo>' to set one."];
+        }
+        try {
+          const res = await fetch(`https://api.github.com/repos/${config.repo}/pulls?state=all&per_page=30`, {
+            headers: { "Authorization": `token ${config.token}` }
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            return [`github: failed to list pull requests for ${config.repo}: ${errText}`];
+          }
+          const prs = await res.json();
+          if (prs.length === 0) {
+            return [`github: no pull requests found in ${config.repo}.`];
+          }
+          const lines = [`Pull Requests in ${config.repo}:`];
+          prs.forEach((pr: any) => {
+            lines.push(`  #${pr.number} [${pr.state.toUpperCase()}] ${pr.title} (by ${pr.user.login})`);
+          });
+          return lines;
+        } catch (err: any) {
+          return [`github: failed to list pull requests: ${err.message || String(err)}`];
+        }
+      };
+
+      // --- Routing ---
       if (sub === 'login') {
         setTimeout(() => {
           const width = 600;
@@ -1563,6 +1774,61 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
           "github: opening GitHub authorization popup...",
           "Please complete authorization in the popup window."
         ];
+      }
+
+      if (sub === 'create') {
+        const repoName = args[1];
+        const visibility = args[2] || "public";
+        return await handleCreateRepo(repoName, visibility);
+      }
+
+      if (sub === 'delete') {
+        const repoName = args[1];
+        return await handleDeleteRepo(repoName);
+      }
+
+      if (sub === 'repo') {
+        const action = args[1];
+        if (action === 'list') {
+          return await handleListRepos();
+        } else if (action === 'create') {
+          return await handleCreateRepo(args[2], args[3] || "public");
+        } else if (action === 'delete') {
+          return await handleDeleteRepo(args[2]);
+        } else {
+          return ["github: repo usage: github repo [list/create/delete]"];
+        }
+      }
+
+      if (sub === 'issue') {
+        const action = args[1];
+        if (action === 'list') {
+          return await handleListIssues();
+        } else if (action === 'create') {
+          let title = "";
+          let body = "";
+          for (let i = 2; i < args.length; i++) {
+            if (args[i] === '--title' || args[i] === '-t') {
+              title = args[i+1] || "";
+              i++;
+            } else if (args[i] === '--body' || args[i] === '-b') {
+              body = args[i+1] || "";
+              i++;
+            }
+          }
+          return await handleCreateIssue(title, body);
+        } else {
+          return ["github: issue usage: github issue [list/create]"];
+        }
+      }
+
+      if (sub === 'pr') {
+        const action = args[1];
+        if (action === 'list') {
+          return await handleListPRs();
+        } else {
+          return ["github: pr usage: github pr [list]"];
+        }
       }
 
       if (sub === 'config') {
@@ -1658,7 +1924,23 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
         return output;
       }
       
-      return [`github: unknown subcommand: ${sub}`];
+      // Default usage
+      return [
+        "github: usage:",
+        "  github login                         - Log in via GitHub OAuth (Auto Token)",
+        "  github repo list                     - List user repositories",
+        "  github repo create <name> [vis]      - Create a new repository (vis: private/public)",
+        "  github repo delete <name>            - Delete a repository (e.g. username/repo)",
+        "  github issue list                    - List issues in the target repository",
+        "  github issue create -t <title> -b <body> - Create a new issue in target repo",
+        "  github pr list                       - List pull requests in target repo",
+        "  github config token <YOUR_TOKEN>     - Set GitHub Personal Access Token (Manual)",
+        "  github config repo <OWNER/REPO>      - Set Target Repository",
+        "  github config show                   - Show Current Config",
+        "  github push <COMMIT_MESSAGE>         - Push VFS files to GitHub",
+        "  github delete <repo_name>            - (Alias) Delete a GitHub repository",
+        "  github create <repo_name> [vis]      - (Alias) Create a new repository"
+      ];
     }
     case 'date':
       return [new Date().toString()];
