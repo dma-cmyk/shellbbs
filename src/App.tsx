@@ -1527,6 +1527,120 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
           return [`${adj}${noun}${pred} - ${name}`];
       }
       return [FORTUNES[Math.floor(Math.random() * FORTUNES.length)]];
+    case 'github': {
+      const sub = args[0];
+      if (!sub) {
+        return [
+          "github: usage:",
+          "  github config token <YOUR_TOKEN>  - Set GitHub Personal Access Token",
+          "  github config repo <OWNER/REPO>   - Set Target Repository (e.g. username/reponame)",
+          "  github config show                 - Show Current Config",
+          "  github push <COMMIT_MESSAGE>      - Push VFS files to GitHub"
+        ];
+      }
+      
+      const configKey = "shellbbs_github_config";
+      let config = { token: "", repo: "" };
+      try {
+        const stored = localStorage.getItem(configKey);
+        if (stored) config = JSON.parse(stored);
+      } catch (e) {}
+
+      if (sub === 'config') {
+        const action = args[1];
+        if (action === 'show') {
+          return [
+            `GitHub Config:`,
+            `  Repository: ${config.repo || "(not set)"}`,
+            `  Token:      ${config.token ? "********" + config.token.slice(-4) : "(not set)"}`
+          ];
+        }
+        
+        const val = args[2];
+        if (!action || !val) {
+          return ["github: config usage: github config [token/repo] [value]"];
+        }
+        
+        if (action === 'token') {
+          config.token = val;
+        } else if (action === 'repo') {
+          config.repo = val;
+        } else {
+          return [`github: unknown config key: ${action}`];
+        }
+        
+        localStorage.setItem(configKey, JSON.stringify(config));
+        return [`github: config updated successfully.`];
+      }
+      
+      if (sub === 'push') {
+        const message = args.slice(1).join(' ') || "Update from ShellBBS virtual terminal";
+        if (!config.token || !config.repo) {
+          return ["github: error: GitHub token and repo must be configured first using 'github config'."];
+        }
+        
+        const vfsObj = apiFuncs.getVFS ? apiFuncs.getVFS() : {};
+        const filesToUpload = Object.keys(vfsObj).filter(path => {
+          return vfsObj[path].type === 'file' && !path.startsWith('/sys/') && !path.startsWith('/bin/');
+        });
+        
+        if (filesToUpload.length === 0) {
+          return ["github: no files to upload in VFS (excluding system directories)."];
+        }
+        
+        const output: string[] = [`github: pushing ${filesToUpload.length} files to GitHub repository: ${config.repo}...`];
+        
+        try {
+          for (const path of filesToUpload) {
+            const content = vfsObj[path].content || "";
+            const pathInRepo = path.startsWith('/') ? path.substring(1) : path;
+            
+            output.push(`  Uploading ${pathInRepo}...`);
+            
+            const url = `https://api.github.com/repos/${config.repo}/contents/${pathInRepo}`;
+            
+            let sha: string | undefined;
+            try {
+              const getRes = await fetch(url, {
+                headers: { "Authorization": `token ${config.token}` }
+              });
+              if (getRes.ok) {
+                const getJson = await getRes.json();
+                sha = getJson.sha;
+              }
+            } catch (e) {}
+            
+            const body: any = {
+              message: message,
+              content: btoa(unescape(encodeURIComponent(content)))
+            };
+            if (sha) body.sha = sha;
+            
+            const putRes = await fetch(url, {
+              method: "PUT",
+              headers: {
+                "Authorization": `token ${config.token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(body)
+            });
+            
+            if (!putRes.ok) {
+              const errText = await putRes.text();
+              output.push(`    ❌ Failed to upload ${pathInRepo}: ${errText}`);
+            } else {
+              output.push(`    ✅ Success: ${pathInRepo}`);
+            }
+          }
+          output.push(`github: push operation completed.`);
+        } catch (err: any) {
+          output.push(`github: push failed: ${err.message || String(err)}`);
+        }
+        return output;
+      }
+      
+      return [`github: unknown subcommand: ${sub}`];
+    }
     case 'date':
       return [new Date().toString()];
     case 'uptime':
