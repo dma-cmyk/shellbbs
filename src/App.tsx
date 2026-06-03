@@ -1532,7 +1532,8 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
       if (!sub) {
         return [
           "github: usage:",
-          "  github config token <YOUR_TOKEN>  - Set GitHub Personal Access Token",
+          "  github login                      - Log in via GitHub OAuth (Auto Token)",
+          "  github config token <YOUR_TOKEN>  - Set GitHub Personal Access Token (Manual)",
           "  github config repo <OWNER/REPO>   - Set Target Repository (e.g. username/reponame)",
           "  github config show                 - Show Current Config",
           "  github push <COMMIT_MESSAGE>      - Push VFS files to GitHub"
@@ -1545,6 +1546,16 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
         const stored = localStorage.getItem(configKey);
         if (stored) config = JSON.parse(stored);
       } catch (e) {}
+
+      if (sub === 'login') {
+        setTimeout(() => {
+          window.location.href = "/api/github/login";
+        }, 800);
+        return [
+          "github: redirecting to GitHub for authorization...",
+          "Please approve the application in the browser."
+        ];
+      }
 
       if (sub === 'config') {
         const action = args[1];
@@ -6243,8 +6254,29 @@ export default function App() {
   cwdRef.current = cwd;
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gitToken = params.get('github_token');
+    let hasLoggedIn = false;
+    
+    if (gitToken) {
+      const configKey = "shellbbs_github_config";
+      let config = { token: "", repo: "" };
+      try {
+        const stored = localStorage.getItem(configKey);
+        if (stored) config = JSON.parse(stored);
+      } catch (e) {}
+      config.token = gitToken;
+      localStorage.setItem(configKey, JSON.stringify(config));
+      
+      params.delete('github_token');
+      const newQuery = params.toString();
+      const newUrl = window.location.pathname + (newQuery ? '?' + newQuery : '') + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+      hasLoggedIn = true;
+    }
+
     const t = locales[langRef.current];
-    setOutput([
+    const initialOutputs: any[] = [
       {
         id: "banner1",
         content: <div className="text-[#4ade80] opacity-80 leading-none mb-4 select-none">
@@ -6258,7 +6290,16 @@ export default function App() {
       },
       { id: "msg1", content: t.bannerDesc },
       { id: "msg2", content: t.helpText }
-    ]);
+    ];
+    
+    if (hasLoggedIn) {
+      initialOutputs.push({
+        id: "github-login-success",
+        content: <div className="text-emerald-400 font-bold mt-2">🔑 GitHub認証に成功しました！トークンが正常に設定されました。</div>
+      });
+    }
+    
+    setOutput(initialOutputs);
   }, []);
 
   const apiFuncs = {

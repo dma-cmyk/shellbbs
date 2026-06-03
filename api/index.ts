@@ -291,6 +291,62 @@ app.post("/api/posts/bulk", async (req, res) => {
   }
 });
 
+app.get("/api/github/login", (req, res) => {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  if (!clientId) {
+    return res.status(500).send("GitHub Client ID is not configured on the server. Please set GITHUB_CLIENT_ID environment variable.");
+  }
+  
+  const host = req.headers.host || "localhost:3100";
+  const protocol = req.headers['x-forwarded-proto'] || (host.startsWith('localhost') ? 'http' : 'https');
+  const redirectUri = `${protocol}://${host}/api/github/callback`;
+  
+  const authorizeUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  res.redirect(authorizeUrl);
+});
+
+app.get("/api/github/callback", async (req, res) => {
+  const code = req.query.code;
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  
+  if (!code || !clientId || !clientSecret) {
+    return res.status(400).send("Missing code, GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET.");
+  }
+  
+  try {
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code
+      })
+    });
+    
+    if (!tokenResponse.ok) {
+      return res.status(tokenResponse.status).send(`Failed to fetch access token: ${tokenResponse.statusText}`);
+    }
+    
+    const data = await tokenResponse.json();
+    const token = data.access_token;
+    
+    if (!token) {
+      return res.status(400).send(`Failed to parse access token from GitHub response: ${JSON.stringify(data)}`);
+    }
+    
+    const host = req.headers.host || "localhost:3100";
+    const protocol = req.headers['x-forwarded-proto'] || (host.startsWith('localhost') ? 'http' : 'https');
+    res.redirect(`${protocol}://${host}?github_token=${token}`);
+  } catch (error: any) {
+    res.status(500).send(`OAuth callback failed: ${error.message}`);
+  }
+});
+
 app.get("/api/proxy", async (req, res) => {
   const targetUrl = req.query.url as string;
   if (!targetUrl) {
