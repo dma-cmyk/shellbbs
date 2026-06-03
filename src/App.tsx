@@ -768,6 +768,30 @@ env: { cat: 'SYS', related: ['export', 'printenv'], desc: "現在設定されて
 printenv: { cat: 'SYS', related: ['export', 'env'], desc: "設定されている環境変数の一覧を表示します。", usage: "printenv", examples: [{cmd: "printenv", desc: "環境変数の一覧を表示します"}] },
 alias: { cat: 'SYS', related: ['export', 'ls'], desc: "コマンドのエイリアス(別名)を新しく定義します。", usage: "alias <name>=\"<cmd>\"", examples: [{ cmd: "alias ll=\"ls -l\"", desc: "llでls -lを実行できるようにします。" }, { cmd: "alias", desc: "登録済みの一覧を表示" }] },
 history: { cat: 'SYS', related: ['clear'], desc: "これまでに実行したコマンドの履歴を表示します。", usage: "history", examples: [{cmd: "history", desc: "履歴一覧を表示します"}] },
+  github: {
+    cat: 'UTIL',
+    related: ['web', 'export'],
+    desc: "GitHubとの連携機能(リポジトリ作成/削除、Issue一覧/作成、PR一覧、ファイルのプッシュなど)を提供します。GitHub CLI(gh)に似た操作感で使用できます。",
+    usage: "github [login|repo|issue|pr|push|config] [args]",
+    options: [
+      { opt: "login", desc: "GitHub OAuth連携を開始し、自動的にトークンを設定します。" },
+      { opt: "repo list", desc: "ユーザーのリポジトリを一覧表示します。" },
+      { opt: "repo create <name> [private/public]", desc: "新しいリポジトリを作成します。" },
+      { opt: "repo delete <name>", desc: "リポジトリを削除します。" },
+      { opt: "issue list", desc: "ターゲットリポジトリのIssue一覧を表示します。" },
+      { opt: "issue create -t <title> -b <body>", desc: "ターゲットリポジトリに新しいIssueを作成します。" },
+      { opt: "pr list", desc: "ターゲットリポジトリのPull Request一覧を表示します。" },
+      { opt: "push <commit_message>", desc: "VFSのローカルファイルをGitHubにアップロードします。" },
+      { opt: "config repo <owner/repo>", desc: "ターゲットリポジトリを設定します。" }
+    ],
+    examples: [
+      { cmd: "github login", desc: "GitHubにログインします。" },
+      { cmd: "github repo list", desc: "リポジトリ一覧を表示します。" },
+      { cmd: "github repo create my-project", desc: "my-projectリポジトリを作成します。" },
+      { cmd: "github issue create -t 'Bugs' -b 'Fix it'", desc: "Issueを作成します。" },
+      { cmd: "github push 'Update config'", desc: "ファイルをGitHubにアップロードします。" }
+    ]
+  },
 help: { cat: 'SYS', related: [], desc: "ヘルプマニュアルを表示します。コマンド名を指定すると詳細が見れます。", usage: "help [cmd]", examples: [{cmd: "help", desc: "全ての一覧"}, {cmd: "help ls", desc: "lsの詳細"}] }
 };
 
@@ -884,6 +908,30 @@ env: { cat: 'SYS', related: ['export', 'printenv'], desc: "Prints all set enviro
 printenv: { cat: 'SYS', related: ['export', 'env'], desc: "Prints environment variables.", usage: "printenv", examples: [{ cmd: "printenv", desc: "Prints variables." }] },
 alias: { cat: 'SYS', related: ['export', 'ls'], desc: "Defines a new command alias.", usage: "alias <name>=\"<cmd>\"", examples: [{ cmd: "alias ll=\"ls -l\"", desc: "Maps ll to ls -l." }, { cmd: "alias", desc: "Lists registered aliases." }] },
 history: { cat: 'SYS', related: ['clear'], desc: "Prints standard command history.", usage: "history", examples: [{ cmd: "history", desc: "Shows previous commands." }] },
+  github: {
+    cat: 'UTIL',
+    related: ['web', 'export'],
+    desc: "Provides integration with GitHub (create/delete repo, list/create issues, list PRs, push files). Works similar to the GitHub CLI (gh).",
+    usage: "github [login|repo|issue|pr|push|config] [args]",
+    options: [
+      { opt: "login", desc: "Initiates GitHub OAuth flow to set authorization token." },
+      { opt: "repo list", desc: "Lists your repositories." },
+      { opt: "repo create <name> [private/public]", desc: "Creates a new repository." },
+      { opt: "repo delete <name>", desc: "Deletes a repository." },
+      { opt: "issue list", desc: "Lists issues in the target repository." },
+      { opt: "issue create -t <title> -b <body>", desc: "Creates a new issue in the target repository." },
+      { opt: "pr list", desc: "Lists pull requests in the target repository." },
+      { opt: "push <commit_message>", desc: "Pushes VFS local files to the GitHub repository." },
+      { opt: "config repo <owner/repo>", desc: "Sets the target repository." }
+    ],
+    examples: [
+      { cmd: "github login", desc: "Log in via GitHub OAuth." },
+      { cmd: "github repo list", desc: "Lists your repositories." },
+      { cmd: "github repo create my-project", desc: "Creates a new repository named my-project." },
+      { cmd: "github issue create -t 'Bugs' -b 'Fix it'", desc: "Creates a new issue." },
+      { cmd: "github push 'Update config'", desc: "Pushes files to GitHub." }
+    ]
+  },
 help: { cat: 'SYS', related: [], desc: "Prints help manual.", usage: "help [cmd]", examples: [{ cmd: "help", desc: "Shows index." }, { cmd: "help ls", desc: "Shows details for ls." }] }
 };
 
