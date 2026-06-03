@@ -902,7 +902,16 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
         return ["curl: usage: curl <url>"];
       }
       try {
-        const response = await fetch(url);
+        let fetchUrl = url;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          try {
+            const urlObj = new URL(url);
+            if (urlObj.hostname !== 'localhost' && urlObj.hostname !== '127.0.0.1') {
+              fetchUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+            }
+          } catch (e) {}
+        }
+        const response = await fetch(fetchUrl);
         if (!response.ok) {
           return [`curl: error: HTTP status ${response.status} ${response.statusText}`];
         }

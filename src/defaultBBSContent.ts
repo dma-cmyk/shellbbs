@@ -262,6 +262,24 @@ export const defaultBBSContent = `<!DOCTYPE html>
       text-align: center;
       padding: 20px;
     }
+    .composer-toggle-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: #e0e0e0;
+      border: 1px solid #777;
+      color: black;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 1px 1px 0px white inset, -1px -1px 0px #555 inset;
+      margin-bottom: 4px;
+    }
+    .composer-toggle-bar:hover {
+      background-color: #d5d5d5;
+    }
     .footer-composer {
       background-color: var(--sidebar-bg);
       border-top: 2px solid var(--border-color);
@@ -440,6 +458,15 @@ export const defaultBBSContent = `<!DOCTYPE html>
       
       .mobile-back-btn {
         display: flex !important;
+      }
+      .composer-toggle-bar {
+        display: flex !important;
+      }
+      .footer-composer.collapsed {
+        padding: 4px 8px !important;
+      }
+      .footer-composer.collapsed .composer-grid {
+        display: none !important;
       }
     }
 
@@ -642,7 +669,12 @@ export const defaultBBSContent = `<!DOCTYPE html>
           <!-- Posts list will load here -->
         </div>
 
-        <div class="footer-composer">
+        <div class="footer-composer collapsed" id="footer-composer">
+          <!-- Mobile composer toggle bar -->
+          <div class="composer-toggle-bar" onclick="toggleComposer()">
+            <span>💬 レスを書き込む</span>
+            <span id="composer-toggle-icon">▲</span>
+          </div>
           <div class="composer-grid">
             <div class="composer-row">
               <label>名前：</label>
@@ -1180,6 +1212,14 @@ export const defaultBBSContent = `<!DOCTYPE html>
       document.getElementById('no-thread-selected').style.display = 'none';
       document.getElementById('thread-view').style.display = 'flex';
       
+      // Collapse composer on mobile when thread is changed to maximize reading area
+      if (window.innerWidth <= 640) {
+        const composer = document.getElementById('footer-composer');
+        const icon = document.getElementById('composer-toggle-icon');
+        if (composer) composer.classList.add('collapsed');
+        if (icon) icon.textContent = '▲';
+      }
+      
       // Update sidebar list items visual selection state
       const items = document.querySelectorAll('.thread-item');
       items.forEach(el => el.classList.remove('active'));
@@ -1331,6 +1371,15 @@ export const defaultBBSContent = `<!DOCTYPE html>
       try {
         await apiCreatePosts(activeThreadId, author, text);
         input.value = '';
+        
+        // Collapse composer on mobile after successful post
+        if (window.innerWidth <= 640) {
+          const composer = document.getElementById('footer-composer');
+          const icon = document.getElementById('composer-toggle-icon');
+          if (composer) composer.classList.add('collapsed');
+          if (icon) icon.textContent = '▲';
+        }
+        
         await loadPosts();
         await loadThreads();
       } catch (err) {
@@ -1395,6 +1444,18 @@ export const defaultBBSContent = `<!DOCTYPE html>
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
+      }
+    }
+
+    function toggleComposer() {
+      const composer = document.getElementById('footer-composer');
+      const icon = document.getElementById('composer-toggle-icon');
+      if (!composer || !icon) return;
+      const isCollapsed = composer.classList.toggle('collapsed');
+      icon.textContent = isCollapsed ? '▲' : '▼';
+      if (!isCollapsed) {
+        const textarea = document.getElementById('composer-content');
+        if (textarea) textarea.focus();
       }
     }
 

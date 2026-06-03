@@ -291,6 +291,24 @@ app.post("/api/posts/bulk", async (req, res) => {
   }
 });
 
+app.get("/api/proxy", async (req, res) => {
+  const targetUrl = req.query.url as string;
+  if (!targetUrl) {
+    return res.status(400).json({ error: "Missing url parameter" });
+  }
+  try {
+    const response = await fetch(targetUrl);
+    const contentType = response.headers.get("content-type");
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+    const text = await response.text();
+    res.send(text);
+  } catch (error: any) {
+    res.status(500).json({ error: `Proxy fetch failed: ${error.message}` });
+  }
+});
+
 app.post("/api/ai", async (req, res) => {
   const { endpoint, key, model, prompt } = req.body;
 
