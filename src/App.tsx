@@ -5463,9 +5463,10 @@ function AISettingsModal({ onClose, apiFuncs, isJa }: { onClose: () => void, api
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-       <div className="bg-zinc-900 border border-zinc-700 w-full max-w-lg shadow-2xl rounded-xl font-sans overflow-visible">
-          <div className="p-6 lg:p-8">
-             <div className="flex justify-between items-start mb-6">
+       <div className="bg-zinc-900 border border-zinc-700 w-full max-w-lg shadow-2xl rounded-xl font-sans max-h-[90vh] flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="p-6 lg:p-8 pb-4 shrink-0">
+             <div className="flex justify-between items-start">
                 <div>
                    <h2 className="text-xl font-black text-white tracking-tight">{isJa ? "⚙️ AI/API 設定" : "⚙️ AI/API Settings"}</h2>
                    <p className="text-xs text-zinc-400 mt-2 font-medium">
@@ -5476,106 +5477,110 @@ function AISettingsModal({ onClose, apiFuncs, isJa }: { onClose: () => void, api
                 </div>
                 <button onClick={onClose} className="text-zinc-500 hover:text-white px-2 py-1 text-2xl font-bold rounded-lg hover:bg-zinc-800 transition-colors leading-none tracking-tighter">×</button>
              </div>
-             
-             <div className="space-y-5 mb-8">
-               <div>
-                 <label className="text-[11px] font-bold text-zinc-400 mb-2 block uppercase tracking-wider">{isJa ? "API キー (必須)" : "API Key (Required)"}</label>
-                 <input type="password" value={formData.OPENAI_API_KEY} onChange={e => handleChange('OPENAI_API_KEY', e.target.value)} placeholder="sk-..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" />
-               </div>
-               <div>
-                 <div className="flex justify-between items-end mb-2">
-                   <label className="text-[11px] font-bold text-zinc-400 block uppercase tracking-wider">{isJa ? "モデル名" : "Model Name"}</label>
-                   <button 
-                     onClick={fetchModels} 
-                     disabled={isFetchingModels}
-                     className="text-[10px] bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-emerald-400 px-2 py-1 rounded transition-colors"
-                   >
-                     {isFetchingModels ? (isJa ? "取得中..." : "Fetching...") : (isJa ? "APIから取得" : "Fetch Models")}
-                   </button>
-                 </div>
-                 <div className="relative" ref={dropdownRef}>
-                   <div className="flex gap-2">
-                     <input 
-                       type="text" 
-                       value={formData.OPENAI_MODEL} 
-                       onChange={e => handleChange('OPENAI_MODEL', e.target.value)} 
-                       onFocus={() => { setShowDropdown(true); setSearchModel(''); }}
-                       placeholder="gpt-4o-mini" 
-                       className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" 
-                     />
-                   </div>
-                   {showDropdown && availableModels.length > 0 && (
-                     <div className="absolute z-[110] w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] max-h-60 flex flex-col">
-                         <input 
-                            type="text" 
-                            placeholder={isJa ? "モデルを検索..." : "Search model..."}
-                            value={searchModel}
-                            onChange={e => setSearchModel(e.target.value)}
-                            onMouseDown={e => e.preventDefault()}
-                            className="w-full bg-zinc-950 border-b border-zinc-700 p-2 text-xs font-mono text-white focus:outline-none placeholder:text-zinc-600 shrink-0"
-                            autoFocus
-                         />
-                         <div className="overflow-y-auto flex-1 custom-scrollbar">
-                            {filteredModels.map(m => (
-                                <div 
-                                   key={m} 
-                                   className="p-2 py-2.5 text-[11px] cursor-pointer hover:bg-emerald-600 hover:text-white text-zinc-300 truncate font-mono border-b border-zinc-800/50 last:border-0"
-                                   onMouseDown={e => e.preventDefault()}
-                                   onClick={() => {
-                                       handleChange('OPENAI_MODEL', m);
-                                       setShowDropdown(false);
-                                   }}
-                                >
-                                   {m}
-                                </div>
-                            ))}
-                            {filteredModels.length === 0 && (
-                               <div className="p-3 text-[11px] text-zinc-500 text-center font-medium">{isJa ? "見つかりません" : "No models found"}</div>
-                            )}
-                         </div>
-                     </div>
-                   )}
-                 </div>
-                 {modelFetchError && <div className="text-[10px] text-red-500 mt-1.5 font-medium">{modelFetchError}</div>}
-                 {availableModels.length > 0 && !modelFetchError && <div className="text-[10px] text-emerald-500 mt-1.5 font-medium">{isJa ? `${availableModels.length}個のモデルを取得しました。入力欄のプルダウンから選択できます。` : `Fetched ${availableModels.length} models. Select from the dropdown.`}</div>}
-               </div>
-               <div>
-                 <label className="text-[11px] font-bold text-zinc-400 mb-2 block uppercase tracking-wider">{isJa ? "エージェントの最大ステップ数" : "Agent Max Steps"}</label>
-                 <input type="number" min="1" max="50" value={formData.AGENT_MAX_STEPS} onChange={e => handleChange('AGENT_MAX_STEPS', e.target.value)} placeholder="5" className="w-[120px] bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" />
-               </div>
-               <div>
-                 <label className="text-[11px] font-bold text-zinc-400 mb-2 block uppercase tracking-wider">{isJa ? "API ベース URL" : "API Base URL"}</label>
-                 <input type="text" value={formData.OPENAI_BASE_URL} onChange={e => handleChange('OPENAI_BASE_URL', e.target.value)} placeholder="https://api.openai.com/v1/chat/completions" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" />
-                 <div className="text-[10px] text-zinc-500 mt-1.5 font-medium">{isJa ? "互換API (OpenRouter等) を使用する場合は変更してください。" : "Change if you are using an OpenAI-compatible API (e.g., OpenRouter)."}</div>
+          </div>
+          
+          {/* Scrollable Contents */}
+          <div className="flex-1 overflow-y-auto px-6 lg:px-8 pb-2 custom-scrollbar">
+             <div className="space-y-5 mb-4">
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400 mb-2 block uppercase tracking-wider">{isJa ? "API キー (必須)" : "API Key (Required)"}</label>
+                  <input type="password" value={formData.OPENAI_API_KEY} onChange={e => handleChange('OPENAI_API_KEY', e.target.value)} placeholder="sk-..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" />
                 </div>
-                <div className="flex items-center justify-between p-3.5 bg-zinc-950/40 border border-zinc-805 rounded-xl my-4">
-                  <div>
-                    <label className="text-xs font-bold text-zinc-200 block uppercase tracking-wide mb-1">
-                      {isJa ? "AI自動コマンド実行の確認" : "AI Command Approval Check"}
-                    </label>
-                    <span className="text-[10px] text-zinc-500 leading-normal block">
-                      {isJa 
-                        ? "有効にすると、AIエージェントがコマンドを実行する前に１回毎にユーザーに許可を求めます。"
-                        : "When enabled, asks for your confirmation before executing any commands suggested by the AI."}
-                    </span>
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <label className="text-[11px] font-bold text-zinc-400 block uppercase tracking-wider">{isJa ? "モデル名" : "Model Name"}</label>
+                    <button 
+                      onClick={fetchModels} 
+                      disabled={isFetchingModels}
+                      className="text-[10px] bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-emerald-400 px-2 py-1 rounded transition-colors"
+                    >
+                      {isFetchingModels ? (isJa ? "取得中..." : "Fetching...") : (isJa ? "APIから取得" : "Fetch Models")}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setRequireApprovalVal(!requireApprovalVal)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-205 ease-in-out focus:outline-none ${requireApprovalVal ? 'bg-emerald-600' : 'bg-zinc-800'}`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-205 ease-in-out ${requireApprovalVal ? 'translate-x-5' : 'translate-x-0'}`}
-                    />
-                  </button>
-               </div>
+                  <div className="relative" ref={dropdownRef}>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={formData.OPENAI_MODEL} 
+                        onChange={e => handleChange('OPENAI_MODEL', e.target.value)} 
+                        onFocus={() => { setShowDropdown(true); setSearchModel(''); }}
+                        placeholder="gpt-4o-mini" 
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" 
+                      />
+                    </div>
+                    {showDropdown && availableModels.length > 0 && (
+                      <div className="absolute z-[110] w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] max-h-60 flex flex-col">
+                          <input 
+                             type="text" 
+                             placeholder={isJa ? "モデルを検索..." : "Search model..."}
+                             value={searchModel}
+                             onChange={e => setSearchModel(e.target.value)}
+                             onMouseDown={e => e.preventDefault()}
+                             className="w-full bg-zinc-950 border-b border-zinc-700 p-2 text-xs font-mono text-white focus:outline-none placeholder:text-zinc-600 shrink-0"
+                             autoFocus
+                          />
+                          <div className="overflow-y-auto flex-1 custom-scrollbar">
+                             {filteredModels.map(m => (
+                                 <div 
+                                    key={m} 
+                                    className="p-2 py-2.5 text-[11px] cursor-pointer hover:bg-emerald-600 hover:text-white text-zinc-300 truncate font-mono border-b border-zinc-800/50 last:border-0"
+                                    onMouseDown={e => e.preventDefault()}
+                                    onClick={() => {
+                                        handleChange('OPENAI_MODEL', m);
+                                        setShowDropdown(false);
+                                    }}
+                                 >
+                                    {m}
+                                 </div>
+                             ))}
+                             {filteredModels.length === 0 && (
+                                <div className="p-3 text-[11px] text-zinc-500 text-center font-medium">{isJa ? "見つかりません" : "No models found"}</div>
+                             )}
+                          </div>
+                      </div>
+                    )}
+                  </div>
+                  {modelFetchError && <div className="text-[10px] text-red-500 mt-1.5 font-medium">{modelFetchError}</div>}
+                  {availableModels.length > 0 && !modelFetchError && <div className="text-[10px] text-emerald-500 mt-1.5 font-medium">{isJa ? `${availableModels.length}個のモデルを取得しました。入力欄のプルダウンから選択できます。` : `Fetched ${availableModels.length} models. Select from the dropdown.`}</div>}
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400 mb-2 block uppercase tracking-wider">{isJa ? "エージェントの最大ステップ数" : "Agent Max Steps"}</label>
+                  <input type="number" min="1" max="50" value={formData.AGENT_MAX_STEPS} onChange={e => handleChange('AGENT_MAX_STEPS', e.target.value)} placeholder="5" className="w-[120px] bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400 mb-2 block uppercase tracking-wider">{isJa ? "API ベース URL" : "API Base URL"}</label>
+                  <input type="text" value={formData.OPENAI_BASE_URL} onChange={e => handleChange('OPENAI_BASE_URL', e.target.value)} placeholder="https://api.openai.com/v1/chat/completions" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm font-mono text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700 shadow-inner" />
+                  <div className="text-[10px] text-zinc-500 mt-1.5 font-medium">{isJa ? "互換API (OpenRouter等) を使用する場合は変更してください。" : "Change if you are using an OpenAI-compatible API (e.g., OpenRouter)."}</div>
+                 </div>
+                 <div className="flex items-center justify-between p-3.5 bg-zinc-950/40 border border-zinc-805 rounded-xl my-2">
+                   <div>
+                     <label className="text-xs font-bold text-zinc-200 block uppercase tracking-wide mb-1">
+                       {isJa ? "AI自動コマンド実行の確認" : "AI Command Approval Check"}
+                     </label>
+                     <span className="text-[10px] text-zinc-500 leading-normal block">
+                       {isJa 
+                         ? "有効にすると、AIエージェントがコマンドを実行する前に１回毎にユーザーに許可を求めます。"
+                         : "When enabled, asks for your confirmation before executing any commands suggested by the AI."}
+                     </span>
+                   </div>
+                   <button
+                     type="button"
+                     onClick={() => setRequireApprovalVal(!requireApprovalVal)}
+                     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-205 ease-in-out focus:outline-none ${requireApprovalVal ? 'bg-emerald-600' : 'bg-zinc-800'}`}
+                   >
+                     <span
+                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-205 ease-in-out ${requireApprovalVal ? 'translate-x-5' : 'translate-x-0'}`}
+                     />
+                   </button>
+                </div>
              </div>
+          </div>
 
-             <div className="mt-4">
-               <button onClick={save} className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg hover:shadow-emerald-500/20 active:scale-[0.99] transition-all text-sm tracking-wide">
-                 {isJa ? "保存" : "Save Settings"}
-               </button>
-             </div>
+          {/* Footer */}
+          <div className="p-6 lg:p-8 pt-4 border-t border-zinc-800 bg-zinc-900 shrink-0">
+             <button onClick={save} className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg hover:shadow-emerald-500/20 active:scale-[0.99] transition-all text-sm tracking-wide">
+               {isJa ? "保存" : "Save Settings"}
+             </button>
           </div>
        </div>
     </div>
