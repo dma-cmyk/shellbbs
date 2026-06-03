@@ -897,7 +897,7 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
 
   switch (cmd) {
     case 'curl': {
-      const url = args[0];
+      const url = args.find(a => !a.startsWith('-'));
       if (!url) {
         return ["curl: usage: curl <url>"];
       }
@@ -949,6 +949,7 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
     case 'grep': {
       let flagI = false;
       let flagV = false;
+      let flagO = false;
       let pattern = "";
       let srcFile = "";
       const currentDir = apiFuncs.getCWD ? apiFuncs.getCWD() : "/";
@@ -957,6 +958,7 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
       for (const a of args) {
         if (a === '-i') flagI = true;
         else if (a === '-v') flagV = true;
+        else if (a === '-o') flagO = true;
         else if (!pattern) pattern = a;
         else if (!srcFile) srcFile = a;
       }
@@ -973,10 +975,61 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
       }
       
       try {
+        if (flagO) {
+          const rx = new RegExp(pattern, (flagI ? "i" : "") + "g");
+          const results: string[] = [];
+          for (const line of linesInput) {
+            const matches = line.match(rx);
+            if (matches) {
+              results.push(...matches);
+            }
+          }
+          return results;
+        }
+        
         const rx = new RegExp(pattern, flagI ? "i" : "");
         return linesInput.filter(line => flagV ? !rx.test(line) : rx.test(line));
       } catch (e: any) {
         return [`grep: invalid regex`];
+      }
+    }
+    case 'sed': {
+      let script = "";
+      let srcFile = "";
+      const currentDir = apiFuncs.getCWD ? apiFuncs.getCWD() : "/";
+      const vfsObj = apiFuncs.getVFS ? apiFuncs.getVFS() : {};
+      
+      for (const a of args) {
+        if (!script) script = a;
+        else if (!srcFile) srcFile = a;
+      }
+      
+      let linesInput = stdin;
+      if (srcFile) {
+        const resolved = resolvePath(currentDir, srcFile);
+        if (vfsObj[resolved] && vfsObj[resolved].type === 'file') {
+          linesInput = (vfsObj[resolved].content || "").split('\n');
+        } else {
+          return [`sed: ${srcFile}: No such virtual file`];
+        }
+      }
+      
+      if (!script) return linesInput;
+      
+      const match = script.match(/^s\/((?:\\\/|[^\/])*)\/((?:\\\/|[^\/])*)\/([g]*)$/);
+      if (!match) {
+        return [`sed: unsupported script format (only simple s/pattern/replacement/g is supported)`];
+      }
+      
+      const pat = match[1].replace(/\\\//g, '/');
+      const rep = match[2].replace(/\\\//g, '/');
+      const flags = match[3];
+      
+      try {
+        const rx = new RegExp(pat, flags);
+        return linesInput.map(line => line.replace(rx, rep));
+      } catch (e: any) {
+        return [`sed: invalid regex: ${e.message}`];
       }
     }
     case 'wc': {
