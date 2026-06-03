@@ -339,9 +339,41 @@ app.get("/api/github/callback", async (req, res) => {
       return res.status(400).send(`Failed to parse access token from GitHub response: ${JSON.stringify(data)}`);
     }
     
-    const host = req.headers.host || "localhost:3100";
-    const protocol = req.headers['x-forwarded-proto'] || (host.startsWith('localhost') ? 'http' : 'https');
-    res.redirect(`${protocol}://${host}?github_token=${token}`);
+    res.send(`
+      <html>
+      <head>
+        <title>GitHub Authorization Success</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f1f5f9; }
+          .card { text-align: center; background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); max-width: 360px; }
+          h3 { color: #34d399; margin-top: 0; font-size: 20px; }
+          p { color: #94a3b8; font-size: 14px; margin-bottom: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h3>🔑 認証に成功しました！</h3>
+          <p>トークンが設定されました。このウィンドウは自動的に閉じます。</p>
+        </div>
+        <script>
+          const token = "${token}";
+          const configKey = "shellbbs_github_config";
+          let config = { token: "", repo: "" };
+          try {
+            const stored = localStorage.getItem(configKey);
+            if (stored) config = JSON.parse(stored);
+          } catch (e) {}
+          config.token = token;
+          localStorage.setItem(configKey, JSON.stringify(config));
+          
+          if (window.opener) {
+            window.opener.postMessage({ type: 'GITHUB_LOGIN_SUCCESS', token: token }, '*');
+          }
+          setTimeout(() => { window.close(); }, 1500);
+        </script>
+      </body>
+      </html>
+    `);
   } catch (error: any) {
     res.status(500).send(`OAuth callback failed: ${error.message}`);
   }

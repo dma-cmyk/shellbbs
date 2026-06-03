@@ -1549,11 +1549,19 @@ async function executeCommand(cmd: string, args: string[], stdin: string[], user
 
       if (sub === 'login') {
         setTimeout(() => {
-          window.location.href = "/api/github/login";
-        }, 800);
+          const width = 600;
+          const height = 700;
+          const left = window.screenX + (window.outerWidth - width) / 2;
+          const top = window.screenY + (window.outerHeight - height) / 2;
+          window.open(
+            "/api/github/login", 
+            "github_login_popup", 
+            `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+          );
+        }, 100);
         return [
-          "github: redirecting to GitHub for authorization...",
-          "Please approve the application in the browser."
+          "github: opening GitHub authorization popup...",
+          "Please complete authorization in the popup window."
         ];
       }
 
@@ -6275,6 +6283,19 @@ export default function App() {
       hasLoggedIn = true;
     }
 
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'GITHUB_LOGIN_SUCCESS') {
+        setOutput(prev => [
+          ...prev,
+          {
+            id: `github-login-success-${Date.now()}`,
+            content: <div className="text-emerald-400 font-bold mt-2">🔑 GitHub認証に成功しました！トークンが正常に設定されました。(リアルタイム同期)</div>
+          }
+        ]);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
     const t = locales[langRef.current];
     const initialOutputs: any[] = [
       {
@@ -6300,6 +6321,10 @@ export default function App() {
     }
     
     setOutput(initialOutputs);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const apiFuncs = {
